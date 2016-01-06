@@ -1920,6 +1920,7 @@ typedef struct {
 
 extern int nvic_execution_priority(void);
 
+extern void __attribute__((weak)) fault_isr(void);
 extern void nmi_isr(void);
 extern void hard_fault_isr(void);
 extern void memmanage_fault_isr(void);

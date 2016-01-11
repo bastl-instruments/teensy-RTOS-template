@@ -25,10 +25,6 @@
 #include "src/logger.h"
 #include "src/TaskError.h"
 
-#include "dac.h"
-//#include "DMAChannel.h"
-//static DMAChannel dma(false);
-
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
 #define UARTLog_Task_Priority				( tskIDLE_PRIORITY + 2 )
 static xTimerHandle xLEDTimer = NULL;

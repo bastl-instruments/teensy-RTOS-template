@@ -30,10 +30,10 @@ typedef struct hw_ {
 
 
 	struct  {
-		uint16_t k1:12;
-		uint16_t k2:12;
-		uint16_t k3:12;
-		uint16_t k4:12;
+		uint16_t k1;
+		uint16_t k2;
+		uint16_t k3;
+		uint16_t k4;
 	} knob;
 	struct  {
 		uint16_t cv1:12;

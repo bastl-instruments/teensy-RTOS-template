@@ -8,6 +8,8 @@ PROJECT=blinky
 #  Project directory structure
 SRCDIR = src
 FREERTOS_DIR = FreeRTOS
+AUDIOLIB_DIR = /tmp/audio
+# AUDIOLIB_DIR = /home/xoza/src/Audio/
 OUTPUTDIR = bin
 OBJDIR = obj
 
@@ -24,19 +26,30 @@ MCU = mk20dx256
 
 #  Project C & C++ files which are to be compiled
 CPP_FILES = $(wildcard $(SRCDIR)/*.cpp)
-C_FILES = $(wildcard $(SRCDIR)/*.c)
+C_FILES = $(wildcard $(SRCDIR)/*.c) 
+# C_FILES +=  $(wildcard kinetis_i2c/*.c)
 FREERTOS_FILES = $(wildcard $(FREERTOS_DIR)/*.c) 
 FREERTOS_FILES += $(wildcard $(FREERTOS_DIR)/portable/GCC/ARM_CM3/*.c)
 
+AUDIOLIB_FILES_CPP = $(wildcard $(AUDIOLIB_DIR)/*.cpp) 
+AUDIOLIB_FILES_C = $(wildcard $(AUDIOLIB_DIR)/*.c) 
+
+
 #  Change project C & C++ files into object files
-OBJ_FILES := $(addprefix $(OBJDIR)/,$(notdir $(CPP_FILES:.cpp=.o))) $(addprefix $(OBJDIR)/,$(notdir $(C_FILES:.c=.o))) $(addprefix $(OBJDIR)/,$(notdir $(FREERTOS_FILES:.c=.o)))
+OBJ_FILES := $(addprefix $(OBJDIR)/,$(notdir $(CPP_FILES:.cpp=.o))) $(addprefix $(OBJDIR)/,$(notdir $(C_FILES:.c=.o)))
+OBJ_FILES += $(addprefix $(OBJDIR)/,$(notdir $(FREERTOS_FILES:.c=.o))) 
+OBJ_FILES += $(addprefix $(OBJDIR)/,$(notdir $(AUDIOLIB_FILES_CPP:.cpp=.o))) $(addprefix $(OBJDIR)/,$(notdir $(AUDIOLIB_FILES_C:.c=.o)))
 
 #  Here we add any teensyduino or "library" object files. We compile these files
 #  into the local obj directory, just like the Arduino IDE would do. Projects
 #  won't be sharing the object files for these. Thus, we only put things here
 #  that need to be compiled locally (*.c, *.cpp, *.s). No libries (*.a, *.lib)
 #  go here.
+OBJ_FILES += $(OBJDIR)/usb_dev.o $(OBJDIR)/usb_mem.o $(OBJDIR)/usb_desc.o $(OBJDIR)/usb_keyboard.o $(OBJDIR)/usb_seremu.o  $(OBJDIR)/usb_serial.o $(OBJDIR)/usb_midi.o 
 OBJ_FILES += $(OBJDIR)/pins_teensy.o $(OBJDIR)/analog.o 
+OBJ_FILES += $(OBJDIR)/nonstd.o
+OBJ_FILES += $(OBJDIR)/DMAChannel.o
+OBJ_FILES += $(OBJDIR)/AudioStream.o
 # $(OBJDIR)/yield.o 
 
 #  Next we need to define some things in order for Teensyduino to work.
@@ -77,6 +90,7 @@ TARGETTYPE = arm-none-eabi
 TEENSY3X_INC     = $(TEENSY3X_BASEPATH)
 GCC_INC          = $(TOOLPATH)/$(TARGETTYPE)/include
 FREERTOS_INC	 = FreeRTOS/include/ -IFreeRTOS/portable/GCC/ARM_CM3/
+AUDIOLIB_INC	= -I$(AUDIOLIB_DIR) -I$(AUDIOLIB_DIR)/utility
 
 
 #  All possible source directories other than '.' must be defined in
@@ -93,6 +107,11 @@ VPATH = $(TEENSY3X_BASEPATH)
 INCDIRS  = -I$(GCC_INC)
 INCDIRS += -I$(TEENSY3X_INC)
 INCDIRS += -I$(FREERTOS_INC)
+INCDIRS += $(AUDIOLIB_INC)
+
+INCDIRS += -I/home/xoza/src-old/arduino-1.6.5-r5/hardware/teensy/avr/libraries/SPI/
+INCDIRS += -I/home/xoza/src-old/arduino-1.6.5-r5/hardware/teensy/avr/libraries/Wire/
+
 INCDIRS += -Iinclude
 INCDIRS += -I.
 
@@ -112,9 +131,10 @@ LIBDIRS  =
 LIBS = -lm
 
 #  Compiler options
-GCFLAGS = -Wall -fno-common -mcpu=$(CPU) -mthumb -MMD -O$(OPTIMIZATION) $(DEBUG)
+GCFLAGS = -Wall -fno-common -mcpu=$(CPU) -mthumb -MMD -O$(OPTIMIZATION) $(DEBUG) 
 GCFLAGS += $(INCDIRS)
-GCFLAGS += -DF_CPU=$(F_CPU) -D__$(CHIP)__ -DUSB_SERIAL
+GCFLAGS += -DF_CPU=$(F_CPU) -D__$(CHIP)__ -DUSB_SERIAL -DLAYOUT_US_ENGLISH -DTEENSYDUINO=121
+GCFLAGS += -Wall -pedantic -std=gnu++11 -Wextra -Wno-unused-parameter
 
 # You can uncomment the following line to create an assembly output
 # listing of your C files.  If you do this, however, the sed script
@@ -134,7 +154,7 @@ ASFLAGS = -mcpu=$(CPU)
 #  Linker options
 #  Since we are using gcc as the linker rather than ld, we need to pass linker
 #  specific options with the -Wl,<option>,<value> format.
-LDFLAGS  = -Os -Wl,--gc-sections -mcpu=cortex-m4 -mthumb -T$(LSCRIPT) -Wl,-Map,$(OUTPUTDIR)/$(PROJECT).map
+LDFLAGS  = -Os -Wl,--gc-sections -mcpu=cortex-m4 -mthumb -T$(LSCRIPT) -Wl,-Map,$(OUTPUTDIR)/$(PROJECT).map -lstdc++
 LDFLAGS += $(LIBDIRS)
 LDFLAGS += $(LIBS)
 
@@ -147,7 +167,7 @@ LDFLAGS += $(LIBS)
 #
 BINDIR = $(TOOLPATH)/bin
 
-CC = $(BINDIR)/arm-none-eabi-gcc
+CC = arm-none-eabi-gcc
 AS = $(BINDIR)/arm-none-eabi-as
 AR = $(BINDIR)/arm-none-eabi-ar
 LD = $(BINDIR)/arm-none-eabi-ld
@@ -220,6 +240,14 @@ $(OBJDIR)/%.o : $(SRCDIR)/%.c
 	$(CC) $(GCFLAGS) -c $< -o $@ > $(basename $@).lst
 #	$(CC) $(GCFLAGS) -c $< -o $@ 2>&1 | sed -e 's/\(\w\+\):\([0-9]\+\):/\1(\2):/'
 
+$(OBJDIR)/%.o : $(AUDIOLIB_DIR)/%.cpp
+	@mkdir -p $(dir $@)
+	$(CC) $(GCFLAGS) -c $< -o $@ > $(basename $@).lst
+
+$(OBJDIR)/%.o : $(AUDIOLIB_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(GCFLAGS) -c $< -o $@ > $(basename $@).lst
+
 $(OBJDIR)/%.o : $(FREERTOS_DIR)/%.c 
 	@mkdir -p $(dir $@)
 	$(CC) $(GCFLAGS) -c $< -o $@ > $(basename $@).lst
@@ -231,6 +259,7 @@ $(OBJDIR)/%.o : $(FREERTOS_DIR)/portable/GCC/ARM_CM3/%.c
 $(OBJDIR)/%.o : $(TEENSY3X_BASEPATH)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(GCFLAGS) -c $< -o $@ > $(basename $@).lst
+
 	
 $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
 	@mkdir -p $(dir $@)

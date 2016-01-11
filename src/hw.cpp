@@ -20,7 +20,6 @@
 /* local includes */
 #include "macros.h"
 
-#include "LCDTask.h"
 
 namespace TeensyHW {
 
@@ -52,6 +51,8 @@ static void __initLeds()
 	INIT_OUTPUT(LED_3_CFG)
 	INIT_OUTPUT(LED_4_CFG)
 	INIT_OUTPUT(LED_A_CFG)
+
+
 }
 
 #if 0

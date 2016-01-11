@@ -21,6 +21,7 @@
 #include "LCDTask.h"
 #include "logger.h"
 #include "macros.h"
+#include "hw.h"
 
 void adcCalibrate() {
 	uint16_t sum;
@@ -46,12 +47,12 @@ void adcCalibrate() {
 	ADC_CFG1_MODE(2)         Single ended 10 bit mode
 	ADC_CFG1_ADLSMP          Long sample time
 */
-#define ADC_CONFIG1 (ADC_CFG1_ADIV(1) |  ADC_CFG1_ADICLK(1) | ADC_CFG1_MODE(2) | ADC_CFG1_ADLSMP)
+#define ADC_CONFIG1 (ADC_CFG1_ADIV(3) |  ADC_CFG1_ADICLK(1) | ADC_CFG1_MODE(3) | ADC_CFG1_ADLSMP)
 /*
 	ADC_CFG2_MUXSEL          Select channels ADxxb
 	ADC_CFG2_ADLSTS(3)       Shortest long sample time
 */
-#define ADC_CONFIG2  ADC_CFG2_ADLSTS(3) | ADC_CFG2_MUXSEL
+#define ADC_CONFIG2  ADC_CFG2_ADLSTS(0) | ADC_CFG2_MUXSEL
 #define ADCC 8
 
 static uint16_t s_cur_ch = 0;
@@ -69,8 +70,6 @@ static void _muxit(uint8_t val)
 
 static void _ADCInit()
 {
-
-
 	 // init muxer - pin 20,, 21, 22
 	INIT_OUTPUT(MUX_C)
 	INIT_OUTPUT(MUX_B)
@@ -92,9 +91,29 @@ static void _ADCInit()
 	NVIC_ENABLE_IRQ(IRQ_ADC0);
 }
 
+enum KnobChannel {
+	KC_KNOB1	= 5,
+	KC_KNOB2	= 4,
+	KC_KNOB3	= 6,
+	KC_KNOB4	= 7,
+	KC_CV1,
+	KC_CV2,
+	KC_CV3,
+	KC_CV4
+} ;
+
+
 void adc0_isr()
 {	
-	s_ch_vals[s_cur_ch] = ADC0_RA;
+//    s_ch_vals[s_cur_ch] = ADC0_RA;
+	TeensyHW::hw_t *hw = TeensyHW::getHW();
+	switch(s_cur_ch) {
+		case KnobChannel::KC_KNOB1: hw->knob.k1 = ADC0_RA; break;
+		case KnobChannel::KC_KNOB2: hw->knob.k2 = ADC0_RA; break;
+		case KnobChannel::KC_KNOB3: hw->knob.k3 = ADC0_RA; break;
+		case KnobChannel::KC_KNOB4: hw->knob.k4 = ADC0_RA; break;
+		default:	break;
+	}
 	s_cur_ch = (s_cur_ch+1) % 8;
 	_muxit(s_cur_ch);
 	ADC0_SC1A = ADCC | ADC_SC1_AIEN;
@@ -106,7 +125,8 @@ static TaskHandle_t s_xADCTask = NULL;
 static void ADCTask(void *pvParameters)
 {
 	while(1) {
-		LOG_PRINT(Log::LOG_DEBUG, "adc: %03x %03x %03x %03x %03x %03x %03x %03x ", s_ch_vals[0], s_ch_vals[1], s_ch_vals[2], s_ch_vals[3], s_ch_vals[4], s_ch_vals[5], s_ch_vals[6], s_ch_vals[7]);
+		TeensyHW::hw_t *hw = TeensyHW::getHW();
+		LOG_PRINT(Log::LOG_DEBUG, "adc: %04x %04x %04x %04x", hw->knob.k1, hw->knob.k2,hw->knob.k3,hw->knob.k4);
 		vTaskDelay(100);
 	}
 }

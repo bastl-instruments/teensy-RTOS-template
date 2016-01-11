@@ -48,8 +48,9 @@ void _init_Teensyduino_internal_(void);
 void __libc_init_array(void);
 
 
-void fault_isr(void)
+void __attribute__((weak)) fault_isr(void)
 {
+/*GPIOC_PDOR = (1<<5);*/
 	while (1) {
 		// keep polling some communication while in fault
 		// mode, so we don't completely die.
@@ -60,16 +61,18 @@ void fault_isr(void)
 	}
 }
 
+
 void unused_isr(void)
 {
 	fault_isr();
 }
 
 extern volatile uint32_t systick_millis_count;
-//void systick_default_isr(void)
-//{
-//	systick_millis_count++;
-//}
+void systick_default_isr(void)
+{
+	systick_millis_count++;
+	xPortSysTickHandler();
+}
 
 void vApplicationStackOverflowHook( xTaskHandle pxTask, char *pcTaskName )
 {
@@ -79,7 +82,8 @@ void vApplicationStackOverflowHook( xTaskHandle pxTask, char *pcTaskName )
 	/* Run time stack overflow checking is performed if
 	configconfigCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2.  This hook
 	function is called if a stack overflow is detected. */
-	// taskDISABLE_INTERRUPTS();
+	taskDISABLE_INTERRUPTS();
+	fault_isr();
 	for( ;; );
 }
 
@@ -184,12 +188,21 @@ void portd_isr(void)		__attribute__ ((weak, alias("unused_isr")));
 void porte_isr(void)		__attribute__ ((weak, alias("unused_isr")));
 void software_isr(void)		__attribute__ ((weak, alias("unused_isr")));
 
-void (* _VectorsRam[NVIC_NUM_INTERRUPTS+16])(void);
+#if defined(__MK20DX128__)
+__attribute__ ((section(".dmabuffers"), used, aligned(256)))
+#elif defined(__MK20DX256__)
+__attribute__ ((section(".dmabuffers"), used, aligned(512)))
+#elif defined(__MKL26Z64__)
+__attribute__ ((section(".dmabuffers"), used, aligned(256)))
+#elif defined(__MK66FX1M0__)
+__attribute__ ((section(".dmabuffers"), used, aligned(512)))
+#endif
 
-// TODO: create AVR-stype ISR() macro, with default linkage to undefined handler
-//
+// Vectors RAM MUST be 256 aligned!!!!
+void (* _VectorsRam[NVIC_NUM_INTERRUPTS+16])(void) __attribute__ ((aligned(256)));
+
 __attribute__ ((section(".vectors"), used))
-void (* const gVectors[])(void) =
+void (* const _VectorsFlash[NVIC_NUM_INTERRUPTS+16])(void) =
 {
 	(void (*)(void))((unsigned long)&_estack),	//  0 ARM: Initial Stack Pointer
 	ResetHandler,					//  1 ARM: Initial Program Counter
@@ -206,7 +219,7 @@ void (* const gVectors[])(void) =
 	debugmonitor_isr,				// 12 ARM: Debug Monitor
 	fault_isr,					// 13 --
 	xPortPendSVHandler,				// 14 ARM: Pendable req serv(PendableSrvReq)
-	xPortSysTickHandler,					// 15 ARM: System tick timer (SysTick)
+	systick_default_isr,					// 15 ARM: System tick timer (SysTick)
 #if defined(__MK20DX128__)
 	dma_ch0_isr,					// 16 DMA channel 0 transfer complete
 	dma_ch1_isr,					// 17 DMA channel 1 transfer complete
@@ -353,9 +366,6 @@ void (* const gVectors[])(void) =
 #endif
 };
 
-//void usb_isr(void)
-//{
-//}
 
 __attribute__ ((section(".flashconfig"), used))
 const uint8_t flashconfigbytes[16] = {
@@ -414,10 +424,12 @@ void ResetHandler(void)
 	while (dest < &_edata) *dest++ = *src++;
 	dest = &_sbss;
 	while (dest < &_ebss) *dest++ = 0;
-	SCB_VTOR = 0;	// use vector table in flash
 
 	// default all interrupts to medium priority level
+	for (i=0; i < NVIC_NUM_INTERRUPTS + 16; i++) _VectorsRam[i] = _VectorsFlash[i];
 	for (i=0; i < NVIC_NUM_INTERRUPTS; i++) NVIC_SET_PRIORITY(i, 128);
+/*    SCB_VTOR = 0;	// use vector table in flash*/
+	SCB_VTOR = (uint32_t)&_VectorsRam;   // use vector table in ram
 
 	// start in FEI mode
 	// enable capacitors for crystal
@@ -488,12 +500,6 @@ void ResetHandler(void)
 	while (1) ;
 }
 
-// TODO: is this needed for c++ and where does it come from?
-/*
-void _init(void)
-{
-}
-*/
 
 char *__brkval = (char *)&_ebss;
 

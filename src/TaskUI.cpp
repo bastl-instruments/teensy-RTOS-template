@@ -23,7 +23,9 @@ static TaskHandle_t s_xTask = NULL;
 namespace Tasks {
 void UITask(void *pvParameters)
 {
+	while(1) {
 
+	}
 }
 namespace UI {
 int create() {

@@ -25,6 +25,8 @@ namespace Log {
 	void print(loglevel_t lvl, const char *file, int line, const char *fmt, ...);
 }
 
+
+
 #endif
 
 #endif /* _LOGGER_H_ */

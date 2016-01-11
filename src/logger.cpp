@@ -19,7 +19,7 @@
 #include "usb_serial.h"
 
 
-
+#define USB_LOG	1
 #define LOGBUF_SIZE	64
 static char s_logbuf[LOGBUF_SIZE];
 
@@ -27,6 +27,7 @@ namespace Log {
 	
 void print(loglevel_t lvl, const char *file, int line, const char *fmt, ...) 
 {
+#if USB_LOG
 
 	int size;
 	// print time of log
@@ -58,6 +59,8 @@ void print(loglevel_t lvl, const char *file, int line, const char *fmt, ...)
 	usb_serial_write(s_logbuf, size);
 
 	usb_serial_putchar('\n');
+#endif
 }
 
 }
+

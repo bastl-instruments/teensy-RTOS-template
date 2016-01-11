@@ -18,27 +18,44 @@
 #include "ui.h"
 #include <stdio.h>
 
-#include "lcd1602.h"
 
 #include "src/compat.h"
 
-#include "src/LCDTask.h"
 #include "src/TaskADC.h"
 #include "src/logger.h"
 #include "src/TaskError.h"
 
+#include "dac.h"
+//#include "DMAChannel.h"
+//static DMAChannel dma(false);
+
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
 #define UARTLog_Task_Priority				( tskIDLE_PRIORITY + 2 )
 static xTimerHandle xLEDTimer = NULL;
-static xTimerHandle xButtonTimer = NULL;
-static xTimerHandle xUITimer = NULL;
 #define mainDONT_BLOCK	(0)
 
-#include "dac.h"
 
 extern "C" {
 void  fault_isr (void) {
 	static uint8_t toggle = 0;
+
+	uint32_t* sp=0;
+	// this is from "Definitive Guide to the Cortex M3" pg 423
+	asm volatile ( "TST LR, #0x4\n\t"   // Test EXC_RETURN number in LR bit 2
+			"ITE EQ\n\t"         // if zero (equal) then
+			"MRSEQ %0, MSP\n\t"  //   Main Stack was used, put MSP in sp
+			"MRSNE %0, PSP\n\t"  // else Process stack was used, put PSP in sp
+			: "=r" (sp) : : "cc");
+
+#define SCB_SHPR1_USGFAULTPRI *(volatile uint8_t *)0xE000ED20
+#define SCB_SHPR1_BUSFAULTPRI *(volatile uint8_t *)0xE000ED19
+#define SCB_SHPR1_MEMFAULTPRI *(volatile uint8_t *)0xE000ED18
+
+	SCB_SHPR1_BUSFAULTPRI = (uint8_t)255;
+	SCB_SHPR1_USGFAULTPRI = (uint8_t)255;
+	SCB_SHPR1_MEMFAULTPRI = (uint8_t)255;
+
+
 	while(1) {
 		toggle = !toggle;
 		TeensyHW::setLed(TeensyHW::hw_t::LED_PCB, toggle);
@@ -47,6 +64,8 @@ void  fault_isr (void) {
 		TeensyHW::setLed(TeensyHW::hw_t::LED_3,  toggle);
 		TeensyHW::setLed(TeensyHW::hw_t::LED_4,  toggle);
 		TeensyHW::setLed(TeensyHW::hw_t::LED_A,  toggle);
+		LOG_PRINT(Log::LOG_FATAL, "crash: pc=0x%x lr=0x%x", sp[6], sp[5]);
+
 		for (int n=0; n<1000000; n++)  ;
 	}
 }
@@ -65,20 +84,20 @@ static void prvLEDToggleTask(void *pvParameters)
 		}
 }
 
+#include "macros.h"
+#include "output_dac.h"
+#include "synth_sine.h"
+	AudioOutputAnalog dac;
+	AudioSynthWaveformSine sine;
+	AudioConnection          patchCord1(sine, dac);
 
 static void prvLEDTimerCB( xTimerHandle xTimer )
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
-//    Tasks::LCDTask::updatef("%02x %d%d %02x", GPIOC_PDIR, hw->button >> 1, hw->button & 1, hw->button_i);
-//    Tasks::LCDTask::notify();
-
-//    Log::print(Log::LOG_ERROR, "[%08ld] %02x: %d%d %02x", millis()/1000, GPIOC_PDIR, hw->button >> 1, hw->button & 1, hw->button_i);
-	LOG_PRINT(Log::LOG_ERROR, "%02x: %d%d %02x", GPIOC_PDIR, hw->button >> 1, hw->button & 1, hw->button_i);
+	sine.frequency(hw->knob.k1 / 3);
 
 }
 
-
-#include "macros.h"
 
 
 
@@ -86,8 +105,13 @@ extern "C" {
 	// must be extern C to link it properly
 int blinky()
 {
-
 	TeensyHW::init();
+	AudioMemory(12);
+//    dac.analogReference(EXTERNAL);
+	sine.frequency(1000);
+	sine.amplitude(1);
+
+
 
 	// enable fault handler for errors
 #define SCB_SHCSR_USGFAULTENA (uint32_t)1<<18
@@ -95,40 +119,23 @@ int blinky()
 #define SCB_SHCSR_MEMFAULTENA (uint32_t)1<<16
 	SCB_SHCSR |= SCB_SHCSR_BUSFAULTENA | SCB_SHCSR_USGFAULTENA | SCB_SHCSR_MEMFAULTENA;	
 
-DAC::run();
+
+
 
 	xTaskCreate( prvLEDToggleTask, "Rx", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
-	
-	Tasks::LCDTask::create();
-//    Tasks::Error::create();
+//    
 	Tasks::ADC::create();
 
 
  xLEDTimer = xTimerCreate( 	"LEDTimer", 					//|+ A text name, purely to help debugging. +|
-							 ( 1000 ),	//|+ The timer period, in this case 5000ms (5s). +|
+							 ( 1 ),	//|+ The timer period, in this case 5000ms (5s). +|
 							 pdTRUE,						//|+ This is a one shot timer, so xAutoReload is set to pdFALSE. +|
 							 ( void * ) 0,					//|+ The ID is not used, so can be set to anything. +|
 							 prvLEDTimerCB			//	|+ The callback function that switches the LED off. +|
 							 );
 
-// xButtonTimer = xTimerCreate( 	"updateButtons", 					//|+ A text name, purely to help debugging. +|
-//                             ( 5 ),	//|+ The timer period, in this case 5000ms (5s). +|
-//                             pdTRUE,						//|+ This is a one shot timer, so xAutoReload is set to pdFALSE. +|
-//                             ( void * ) 0,					//|+ The ID is not used, so can be set to anything. +|
-//                             prvButtonTimerCB			//	|+ The callback function that switches the LED off. +|
-//                             );
-
-// xUITimer = xTimerCreate( 	"UITimer", 					//|+ A text name, purely to help debugging. +|
-//                             ( 5 ),	//|+ The timer period, in this case 5000ms (5s). +|
-//                             pdTRUE,						//|+ This is a one shot timer, so xAutoReload is set to pdFALSE. +|
-//                             ( void * ) 0,					//|+ The ID is not used, so can be set to anything. +|
-//                             prvUITimerCB			//	|+ The callback function that switches the LED off. +|
-//                             );
 	xTimerStart( xLEDTimer, mainDONT_BLOCK );
-//    xTimerStart( xButtonTimer, mainDONT_BLOCK );
-//    xTimerStart( xUITimer, mainDONT_BLOCK );
 	vTaskStartScheduler();
-
 
 
     return 0;

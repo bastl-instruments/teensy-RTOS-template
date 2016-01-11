@@ -11,10 +11,12 @@
 /* system includes C */
 
 /* system includes C++ */
-
+#if 0
 /* local includes */
 #include <DMAChannel.h>
 #include "kinetis.h"
+static DMAChannel dma(false);
+
 
 static volatile uint16_t s_sinetable[] = {
    2047,    2147,    2248,    2348,    2447,    2545,    2642,    2737,
@@ -53,7 +55,6 @@ static volatile uint16_t s_sinetable[] = {
   #error "Unsupported F_BUS speed"
 #endif
 
-static DMAChannel dma(false);
 
 namespace DAC {
 void run() {
@@ -82,3 +83,5 @@ void run() {
 }
 
 }
+
+#endif

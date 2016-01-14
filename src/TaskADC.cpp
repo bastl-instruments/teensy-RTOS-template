@@ -123,16 +123,46 @@ void adc0_isr()
 
 
 static TaskHandle_t s_xADCTask = NULL;
+static TaskHandle_t s_xCVActTask = NULL;
 
 static void ADCTask(void *pvParameters)
 {
 	while(1) {
 		TeensyHW::hw_t *hw = TeensyHW::getHW();
-		LOG_PRINT(Log::LOG_DEBUG, "adc: %04x %04x %04x %04x %04x %04x %04x %04x", 
+		LOG_PRINT(Log::LOG_DEBUG, "adc: %04x %04x %04x %04x %04x:%d %04x:%d %04x:%d %04x:%d", 
 				hw->knob.k1, hw->knob.k2,hw->knob.k3,hw->knob.k4,
-				hw->cv.cv1, hw->cv.cv2, hw->cv.cv3, hw->cv.cv4
+				hw->cv.cv1, hw->cvAct.cv1, 
+				hw->cv.cv2, hw->cvAct.cv2,
+				hw->cv.cv3, hw->cvAct.cv3,
+				hw->cv.cv4, hw->cvAct.cv4
 				);
 		vTaskDelay(100);
+	}
+}
+
+
+uint8_t s_cvAct_cntr[4] = {0,0,0,0};
+
+#define CHECK_CV_FOR_ACTIVITY(n) {\
+		if(((hw->cv.cv##n >> 3) - 4096) > 1000) {\
+			hw->cvAct.cv##n = 1;\
+			s_cvAct_cntr[n-1] = 0;\
+		} else {\
+			if((s_cvAct_cntr[n-1]++) > 4) hw->cvAct.cv##n = 0;\
+		}\
+}
+
+
+// check for zero value on CV input
+static void ADCActTask(void *pvParameters)
+{
+	while(1) {
+		TeensyHW::hw_t *hw = TeensyHW::getHW();
+		CHECK_CV_FOR_ACTIVITY(1)
+		CHECK_CV_FOR_ACTIVITY(2)
+		CHECK_CV_FOR_ACTIVITY(3)
+		CHECK_CV_FOR_ACTIVITY(4)
+		vTaskDelay(2);
 	}
 }
 namespace Tasks {
@@ -143,6 +173,10 @@ int create() {
 	if(s_xADCTask != NULL) return -2;
 	if(xTaskCreate( ADCTask, "adc", 
 					configMINIMAL_STACK_SIZE*2, 
+					NULL, tskIDLE_PRIORITY + 2, 
+					&s_xADCTask) != pdTRUE) return -1;
+	if(xTaskCreate( ADCActTask, "adcAct", 
+					configMINIMAL_STACK_SIZE, 
 					NULL, tskIDLE_PRIORITY + 2, 
 					&s_xADCTask) != pdTRUE) return -1;
 	return 0;

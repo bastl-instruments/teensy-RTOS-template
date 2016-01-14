@@ -82,9 +82,10 @@ static void prvLEDToggleTask(void *pvParameters)
 
 #include "macros.h"
 #include "output_dac.h"
-#include "synth_hypnotoad.h"
+//#include "synth_hypnotoad.h"
+#include "synth_sine.h"
 	AudioOutputAnalog dac;
-	AudioSynthWaveformHypnotoad sine;
+	AudioSynthWaveformSine sine;
 	AudioConnection          patchCord1(sine, dac);
 
 static void prvUpdateCB( xTimerHandle xTimer )
@@ -96,11 +97,18 @@ static void prvUpdateCB( xTimerHandle xTimer )
 		sine.frequency(n);
 		last = n;
 	}
-	sine.nsines(hw->knob.k2 / 2048);
 	sine.finc(hw->knob.k3 / 6553.0);
 
-	if(((hw->cv.cv1 >> 3) - 4096) > 200) {
+	if(hw->cvAct.cv1) {
 		sine.frequency(hw->cv.cv1 / 8);
+	}
+	if(hw->cvAct.cv2) {
+		sine.nsines(hw->cv.cv2 / 20448);
+	} else {
+		sine.nsines(hw->knob.k2 / 2048);
+	}
+	if(hw->cvAct.cv3) {
+		sine.finc(hw->cv.cv3 / 6553.0);
 	}
 
 

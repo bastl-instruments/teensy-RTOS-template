@@ -42,6 +42,12 @@ typedef struct hw_ {
 		uint16_t cv4;
 		uint16_t cv5;
 	} cv;
+	struct {
+		uint8_t cv1:1;
+		uint8_t cv2:1;
+		uint8_t cv3:1;
+		uint8_t cv4:1;
+	} cvAct;
 	enum ButtonState {
 		BUTTON_NULL		=	0,
 		BUTTON_PRESSED	=	1,

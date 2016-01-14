@@ -18,7 +18,6 @@
 
 
 /* local includes */
-#include "LCDTask.h"
 #include "logger.h"
 #include "macros.h"
 #include "hw.h"

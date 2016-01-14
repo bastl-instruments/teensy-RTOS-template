@@ -23,7 +23,6 @@
 
 #include "src/TaskADC.h"
 #include "src/logger.h"
-#include "src/TaskError.h"
 
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
 #define UARTLog_Task_Priority				( tskIDLE_PRIORITY + 2 )
@@ -90,7 +89,14 @@ static void prvLEDToggleTask(void *pvParameters)
 static void prvLEDTimerCB( xTimerHandle xTimer )
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
-	sine.frequency(hw->knob.k1 / 3);
+	static float last = 0;
+	float n = hw->knob.k1 / 8;
+	if(last != n) {
+		sine.frequency(n);
+		last = n;
+	}
+	sine.nsines(hw->knob.k2 / 2048);
+	sine.finc(hw->knob.k3 / 6553.0);
 
 }
 
@@ -104,7 +110,7 @@ int blinky()
 	TeensyHW::init();
 	AudioMemory(12);
 //    dac.analogReference(EXTERNAL);
-	sine.frequency(1000);
+	sine.frequency(546);
 	sine.amplitude(1);
 
 

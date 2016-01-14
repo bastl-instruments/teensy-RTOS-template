@@ -8,7 +8,7 @@ PROJECT=blinky
 #  Project directory structure
 SRCDIR = src
 FREERTOS_DIR = FreeRTOS
-AUDIOLIB_DIR = /tmp/audio
+AUDIOLIB_DIR = audio
 # AUDIOLIB_DIR = /home/xoza/src/Audio/
 OUTPUTDIR = bin
 OBJDIR = obj

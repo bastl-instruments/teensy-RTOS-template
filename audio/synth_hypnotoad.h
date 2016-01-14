@@ -43,18 +43,18 @@ typedef struct _sine_nfo {
 	int32_t magnitude;
 } sine_nfo_t;
 
-#define NSINES	1
+#define NSINES_MAX	16
 
 class AudioSynthWaveformHypnotoad : public AudioStream
 {
 public:
-	AudioSynthWaveformHypnotoad() : AudioStream(0, NULL), m_nfo() {}
+	AudioSynthWaveformHypnotoad() : AudioStream(0, NULL), m_nfo(), m_fInc(1.01), m_nsines(1) {}
 	void frequency(float freq) {
 		if (freq < 0.0) freq = 0.0;
 		else if (freq > AUDIO_SAMPLE_RATE_EXACT/2) freq = AUDIO_SAMPLE_RATE_EXACT/2;
-		for(int i = 0; i < NSINES; i++) {
+		for(int i = 0; i < NSINES_MAX; i++) {
 			m_nfo[i].phase_inc =   freq * (4294967296.0 / AUDIO_SAMPLE_RATE_EXACT);
-//            freq = freq * 1.03;
+			freq = freq * m_fInc;
 		}
 	}
 	void phase(float angle) {
@@ -63,22 +63,34 @@ public:
 			angle = angle - 360.0;
 			if (angle >= 360.0) return;
 		}
-		for(int i = 0; i < NSINES; i++) {
+		for(int i = 0; i < NSINES_MAX; i++) {
 			m_nfo[i].phase_acc = angle * (4294967296.0 / 360.0);
 		}
 	}
 	void amplitude(float n) {
 		if (n < 0) n = 0;
 		else if (n > 1.0) n = 1.0;
-		for(int i = 0; i < NSINES; i++) {
-			m_nfo[i].magnitude = 65536.0;
-//            m_nfo[i].magnitude = n* (65536.0 / NSINES);
+		for(int i = 0; i < NSINES_MAX; i++) {
+//            m_nfo[i].magnitude = 65536.0;
+			m_nfo[i].magnitude = n* (65536.0 / m_nsines);
 		}
 	}
 	virtual void update(void);
+	void nsines(uint8_t n) {
+		if(n == 0) n =1;
+		else if(n > NSINES_MAX) n = NSINES_MAX;
+		m_nsines = n;
+	}
+	void finc(float f) {
+		if(f < 0) f = 1;
+		else if(f > 10) f = 10;
+		m_fInc = f;
+	}
 private:
 	void addSineToBlock(uint32_t n, audio_block_t *block);
-	sine_nfo_t m_nfo[NSINES];
+	sine_nfo_t m_nfo[NSINES_MAX];
+	float m_fInc;
+	uint8_t m_nsines;
 };
 
 

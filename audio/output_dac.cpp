@@ -149,7 +149,6 @@ void AudioOutputAnalog::isr(void)
 		} while (dest < end);
 	}
 	if (AudioOutputAnalog::update_responsibility) AudioStream::update_all();
-GPIOD_PSOR = 1<<4;
 }
 
 #else

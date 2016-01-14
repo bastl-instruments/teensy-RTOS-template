@@ -75,18 +75,19 @@ static void prvLEDToggleTask(void *pvParameters)
 		{
 				toggle = (toggle) ? 0 : 1;
 				TeensyHW::setLed(TeensyHW::hw_t::LED_PCB, toggle);
-				vTaskDelay(1000);
+				vTaskDelay(500);
+//                LOG_PRINT(Log::LOG_DEBUG, "tick: %d", toggle);
 		}
 }
 
 #include "macros.h"
 #include "output_dac.h"
-#include "synth_sine.h"
+#include "synth_hypnotoad.h"
 	AudioOutputAnalog dac;
-	AudioSynthWaveformSine sine;
+	AudioSynthWaveformHypnotoad sine;
 	AudioConnection          patchCord1(sine, dac);
 
-static void prvLEDTimerCB( xTimerHandle xTimer )
+static void prvUpdateCB( xTimerHandle xTimer )
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	static float last = 0;
@@ -98,6 +99,11 @@ static void prvLEDTimerCB( xTimerHandle xTimer )
 	sine.nsines(hw->knob.k2 / 2048);
 	sine.finc(hw->knob.k3 / 6553.0);
 
+	if(((hw->cv.cv1 >> 3) - 4096) > 200) {
+		sine.frequency(hw->cv.cv1 / 8);
+	}
+
+
 }
 
 
@@ -107,6 +113,7 @@ extern "C" {
 	// must be extern C to link it properly
 int blinky()
 {
+	Log::init();
 	TeensyHW::init();
 	AudioMemory(12);
 //    dac.analogReference(EXTERNAL);
@@ -129,12 +136,13 @@ int blinky()
 	Tasks::ADC::create();
 
 
- xLEDTimer = xTimerCreate( 	"LEDTimer", 					//|+ A text name, purely to help debugging. +|
-							 ( 1 ),	//|+ The timer period, in this case 5000ms (5s). +|
-							 pdTRUE,						//|+ This is a one shot timer, so xAutoReload is set to pdFALSE. +|
-							 ( void * ) 0,					//|+ The ID is not used, so can be set to anything. +|
-							 prvLEDTimerCB			//	|+ The callback function that switches the LED off. +|
-							 );
+	xLEDTimer = xTimerCreate( 	"LEDTimer", 					//|+ A text name, purely to help debugging. +|
+			( 1 ),	//|+ The timer period, in this case 5000ms (5s). +|
+			pdTRUE,						//|+ This is a one shot timer, so xAutoReload is set to pdFALSE. +|
+			( void * ) 0,					//|+ The ID is not used, so can be set to anything. +|
+			prvUpdateCB			//	|+ The callback function that switches the LED off. +|
+			);
+
 
 	xTimerStart( xLEDTimer, mainDONT_BLOCK );
 	vTaskStartScheduler();

@@ -55,7 +55,6 @@ void adcCalibrate() {
 #define ADCC 8
 
 static uint16_t s_cur_ch = 0;
-static uint16_t s_ch_vals[8];
 
 #define MUX_A	C,1
 #define MUX_B	D,6
@@ -95,10 +94,10 @@ enum KnobChannel {
 	KC_KNOB2	= 4,
 	KC_KNOB3	= 6,
 	KC_KNOB4	= 7,
-	KC_CV1,
-	KC_CV2,
-	KC_CV3,
-	KC_CV4
+	KC_CV1		= 0,
+	KC_CV2		= 1,
+	KC_CV3		= 2,
+	KC_CV4		= 3
 } ;
 
 
@@ -111,6 +110,10 @@ void adc0_isr()
 		case KnobChannel::KC_KNOB2: hw->knob.k2 = ADC0_RA; break;
 		case KnobChannel::KC_KNOB3: hw->knob.k3 = ADC0_RA; break;
 		case KnobChannel::KC_KNOB4: hw->knob.k4 = ADC0_RA; break;
+		case KnobChannel::KC_CV1: hw->cv.cv1 = ADC0_RA; break;
+		case KnobChannel::KC_CV2: hw->cv.cv2 = ADC0_RA; break;
+		case KnobChannel::KC_CV3: hw->cv.cv3 = ADC0_RA; break;
+		case KnobChannel::KC_CV4: hw->cv.cv4 = ADC0_RA; break;
 		default:	break;
 	}
 	s_cur_ch = (s_cur_ch+1) % 8;
@@ -125,7 +128,10 @@ static void ADCTask(void *pvParameters)
 {
 	while(1) {
 		TeensyHW::hw_t *hw = TeensyHW::getHW();
-		LOG_PRINT(Log::LOG_DEBUG, "adc: %04x %04x %04x %04x", hw->knob.k1, hw->knob.k2,hw->knob.k3,hw->knob.k4);
+		LOG_PRINT(Log::LOG_DEBUG, "adc: %04x %04x %04x %04x %04x %04x %04x %04x", 
+				hw->knob.k1, hw->knob.k2,hw->knob.k3,hw->knob.k4,
+				hw->cv.cv1, hw->cv.cv2, hw->cv.cv3, hw->cv.cv4
+				);
 		vTaskDelay(100);
 	}
 }

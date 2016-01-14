@@ -11,6 +11,8 @@
 /* system includes C */
 #include <stdarg.h>
 #include <stdio.h>
+#include <FreeRTOS.h>
+#include <semphr.h>
 
 /* system includes C++ */
 
@@ -19,19 +21,37 @@
 #include "usb_serial.h"
 
 
-#define USB_LOG	1
+#define USB_LOG	
 #define LOGBUF_SIZE	64
 static char s_logbuf[LOGBUF_SIZE];
+static SemaphoreHandle_t s_logSem = NULL;
 
 namespace Log {
+
+int init()
+{
+	if(s_logSem == NULL) {
+		s_logSem  = xSemaphoreCreateMutex();
+		if(s_logSem == NULL) {
+			return -1;
+		}
+	}
+	return 0;
+}
+
 	
 void print(loglevel_t lvl, const char *file, int line, const char *fmt, ...) 
 {
-#if USB_LOG
+#ifdef USB_LOG
+	if(usb_configuration == 0) return;
+	if(usb_serial_write_buffer_free() == 0) return;
+
+	if(xSemaphoreTake(s_logSem, 10) == pdFALSE) return;
+	GPIOD_PSOR = 1<<4;
 
 	int size;
 	// print time of log
-	size = sniprintf(s_logbuf, LOGBUF_SIZE, "[%08ld] ", millis());
+	size = sniprintf(s_logbuf, LOGBUF_SIZE, "[%08ld] ",  millis());
 	usb_serial_write(s_logbuf, size);
 	
 //     print loglevel
@@ -59,6 +79,8 @@ void print(loglevel_t lvl, const char *file, int line, const char *fmt, ...)
 	usb_serial_write(s_logbuf, size);
 
 	usb_serial_putchar('\n');
+	xSemaphoreGive(s_logSem);
+	GPIOD_PCOR = 1<<4;
 #endif
 }
 

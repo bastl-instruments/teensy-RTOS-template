@@ -54,6 +54,7 @@ void AudioSynthWaveformHypnotoad::addSineToBlock(uint32_t n, audio_block_t *bloc
 			ph += inc;
 		}
 		nfo->phase_acc = ph;
+		return;
 	}
 	nfo->phase_acc+= nfo->phase_inc* AUDIO_BLOCK_SAMPLES;
 }
@@ -64,8 +65,9 @@ void AudioSynthWaveformHypnotoad::update(void)
 	audio_block_t *block;
 
 	block = allocate();
+	memset(block, 0, sizeof(audio_block_t));
 	if (block) {
-		for(int i = 0; i < NSINES; i++) {
+		for(int i = 0; i < m_nsines; i++) {
 			addSineToBlock(i, block);
 		}
 		transmit(block);

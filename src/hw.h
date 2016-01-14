@@ -36,11 +36,11 @@ typedef struct hw_ {
 		uint16_t k4;
 	} knob;
 	struct  {
-		uint16_t cv1:12;
-		uint16_t cv2:12;
-		uint16_t cv3:12;
-		uint16_t cv4:12;
-		uint16_t cv5:12;
+		uint16_t cv1;
+		uint16_t cv2;
+		uint16_t cv3;
+		uint16_t cv4;
+		uint16_t cv5;
 	} cv;
 	enum ButtonState {
 		BUTTON_NULL		=	0,

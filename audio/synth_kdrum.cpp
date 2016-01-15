@@ -24,10 +24,13 @@ extern const int16_t AudioWaveformSine[257];
 
 #define TODO_FREQ_INCREMENT	3
 
+#include <math.h>
+#include "src/logger.h"
+
 void AudioKDrum::addSineToBlock(uint32_t n, audio_block_t *block)
 {
 	uint32_t i, ph, index, scale;
-	int32_t val1, val2;
+	int32_t val1, val2, mag;
 	if(block == NULL) return;
 	sine_nfo_t *nfo = &m_nfo;
 	if(nfo->magnitude) {
@@ -40,7 +43,7 @@ void AudioKDrum::addSineToBlock(uint32_t n, audio_block_t *block)
 			val2 *= scale;
 			val1 *= 0xFFFF - scale;
 			//block->data[i] = (((val1 + val2) >> 16) * magnitude) >> 16;
-			block->data[i] += multiply_32x32_rshift32(val1 + val2, nfo->magnitude);
+			block->data[i] = multiply_32x32_rshift32(val1 + val2, m_vca.next() * 65536.0);
 			nfo->phase_inc -= m_fInc * (4294967296.0 / AUDIO_SAMPLE_RATE_EXACT);
 			ph += nfo->phase_inc;
 		}
@@ -56,7 +59,6 @@ void AudioKDrum::update(void)
 	audio_block_t *block;
 
 	block = allocate();
-	memset(block, 0, sizeof(audio_block_t));
 	if (block) {
 		addSineToBlock(0, block);
 		transmit(block);

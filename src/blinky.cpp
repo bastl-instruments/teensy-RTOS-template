@@ -76,7 +76,6 @@ static void prvLEDToggleTask(void *pvParameters)
 				toggle = (toggle) ? 0 : 1;
 				TeensyHW::setLed(TeensyHW::hw_t::LED_PCB, toggle);
 				vTaskDelay(500);
-//                LOG_PRINT(Log::LOG_DEBUG, "tick: %d", toggle);
 		}
 }
 
@@ -112,13 +111,11 @@ static void prvUpdateCB( xTimerHandle xTimer )
 	if(hw->cvAct.cv1) {
 		sine.frequency(hw->cv.cv1 / 8);
 	}
-#if 0
 	if(hw->cvAct.cv2) {
-		sine.nsines(hw->cv.cv2 / 20448);
+//        sine.dec(hw->cv.cv2 / 2);
 	} else {
-		sine.nsines(hw->knob.k2 / 2048);
+		sine.dec(hw->knob.k2 / 2);
 	}
-#endif
 //    TeensyHW::setLedBlink(TeensyHW::hw_t::LED_1, hw->knob.k2/8192);
 	if(hw->cvAct.cv3) {
 		sine.finc(hw->cv.cv3 / 6553.0);
@@ -126,7 +123,10 @@ static void prvUpdateCB( xTimerHandle xTimer )
 		sine.finc(hw->knob.k3 / 6553.0);
 	}
 	if(hw->cvAct.cv4) {
+		TeensyHW::setLed(TeensyHW::hw_t::LED_A, 1);
 		sine.trigger();
+	} else {
+		TeensyHW::setLed(TeensyHW::hw_t::LED_A, 0);
 	}
 
 }

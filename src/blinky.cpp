@@ -26,7 +26,7 @@
 
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
 #define UARTLog_Task_Priority				( tskIDLE_PRIORITY + 2 )
-static xTimerHandle xLEDTimer = NULL;
+static xTimerHandle xUpdateTimer = NULL;
 #define mainDONT_BLOCK	(0)
 
 
@@ -82,35 +82,52 @@ static void prvLEDToggleTask(void *pvParameters)
 
 #include "macros.h"
 #include "output_dac.h"
-//#include "synth_hypnotoad.h"
-#include "synth_sine.h"
+#include "synth_kdrum.h"
+//#include "synth_sine.h"
 	AudioOutputAnalog dac;
-	AudioSynthWaveformSine sine;
+	AudioKDrum sine;
 	AudioConnection          patchCord1(sine, dac);
 
+static void buttonEventCB(TeensyHW::hw_t::ButtonState s)
+{
+	static bool t = 0;
+	if(s == TeensyHW::hw_t::BUTTON_PRESSED) {
+		t = !t;
+		TeensyHW::setLed(TeensyHW::hw_t::LED_3, t);
+		sine.trigger();
+	}
+}
 static void prvUpdateCB( xTimerHandle xTimer )
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	static float last = 0;
 	float n = hw->knob.k1 / 8;
-	if(last != n) {
+	int tmp;
+	if(fabs(last - n) > 100) {
+		LOG_PRINT(Log::LOG_DEBUG, "setting f to %x", hw->knob.k1/8);
 		sine.frequency(n);
 		last = n;
 	}
-	sine.finc(hw->knob.k3 / 6553.0);
 
 	if(hw->cvAct.cv1) {
 		sine.frequency(hw->cv.cv1 / 8);
 	}
+#if 0
 	if(hw->cvAct.cv2) {
 		sine.nsines(hw->cv.cv2 / 20448);
 	} else {
 		sine.nsines(hw->knob.k2 / 2048);
 	}
+#endif
+//    TeensyHW::setLedBlink(TeensyHW::hw_t::LED_1, hw->knob.k2/8192);
 	if(hw->cvAct.cv3) {
 		sine.finc(hw->cv.cv3 / 6553.0);
+	} else {
+		sine.finc(hw->knob.k3 / 6553.0);
 	}
-
+	if(hw->cvAct.cv4) {
+		sine.trigger();
+	}
 
 }
 
@@ -126,7 +143,8 @@ int blinky()
 	AudioMemory(12);
 //    dac.analogReference(EXTERNAL);
 	sine.frequency(546);
-	sine.amplitude(1);
+//    sine.amplitude(1);
+	TeensyHW::setButtonEventCB(buttonEventCB);
 
 
 
@@ -144,7 +162,7 @@ int blinky()
 	Tasks::ADC::create();
 
 
-	xLEDTimer = xTimerCreate( 	"LEDTimer", 					//|+ A text name, purely to help debugging. +|
+	xUpdateTimer = xTimerCreate( 	"LEDTimer", 					//|+ A text name, purely to help debugging. +|
 			( 1 ),	//|+ The timer period, in this case 5000ms (5s). +|
 			pdTRUE,						//|+ This is a one shot timer, so xAutoReload is set to pdFALSE. +|
 			( void * ) 0,					//|+ The ID is not used, so can be set to anything. +|
@@ -152,7 +170,7 @@ int blinky()
 			);
 
 
-	xTimerStart( xLEDTimer, mainDONT_BLOCK );
+	xTimerStart( xUpdateTimer, mainDONT_BLOCK );
 	vTaskStartScheduler();
 
 

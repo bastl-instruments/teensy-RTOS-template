@@ -24,7 +24,9 @@
 namespace TeensyHW {
 
 static xTimerHandle xHWTimer = NULL;
+static xTimerHandle xLedTimer = NULL;
 static hw_t _g_hw;
+static buttonEventCB_ft _s_buttonEvent_cb;
 
 
 
@@ -99,12 +101,23 @@ void HWUpdateTimerCB(xTimerHandle xT)
 	}
 
 	_g_hw.button = (_g_hw.button << 1) | _g_hw.button_s;
-	if(_g_hw.button == hw_t::BUTTON_PRESSED) {
-		static bool s = 0;
-		s = !s;
-		setLed(hw_t::LED_1, s);
-	}
+	if((_s_buttonEvent_cb != NULL) && 
+			((_g_hw.button == hw_t::BUTTON_PRESSED) || 
+			 (_g_hw.button == hw_t::BUTTON_HOLD) || 
+			 (_g_hw.button == hw_t::BUTTON_RELEASED))) _s_buttonEvent_cb((TeensyHW::hw_t::ButtonState)_g_hw.button);
 
+}
+
+void HWBlinkyCB(xTimerHandle xT)
+{
+	static uint8_t counter;
+	counter++;
+	if(counter & _g_hw.led1_blinko) setLed(hw_t::LED_1, !_g_hw.led1);
+	if(counter & _g_hw.led2_blinko) setLed(hw_t::LED_2, !_g_hw.led2);
+	if(counter & _g_hw.led3_blinko) setLed(hw_t::LED_3, !_g_hw.led3);
+	if(counter & _g_hw.led4_blinko) setLed(hw_t::LED_4, !_g_hw.led4);
+	if(counter & _g_hw.ledA_blinko) setLed(hw_t::LED_A, !_g_hw.ledA);
+	if(counter & _g_hw.ledPCB_blinko) setLed(hw_t::LED_PCB, !_g_hw.ledPCB);
 }
 
 static void __initButtons()
@@ -119,14 +132,13 @@ int init()
 {
 	__initLeds();
 	__initButtons();
+_g_hw.led1_blinko = 16;
 
- xHWTimer = xTimerCreate( 	"HWTimer", 					//|+ A text name, purely to help debugging. +|
-							 ( 30 ),	//|+ The timer period, in this case 5000ms (5s). +|
-							 pdTRUE,						//|+ This is a one shot timer, so xAutoReload is set to pdFALSE. +|
-							 ( void * ) 0,					//|+ The ID is not used, so can be set to anything. +|
-							 HWUpdateTimerCB			//	|+ The callback function that switches the LED off. +|
-							 );
+	xHWTimer = xTimerCreate("HWTimer", ( 30 ),  pdTRUE,  ( void * ) 0, HWUpdateTimerCB);
+	xLedTimer = xTimerCreate("LEDTimer", 100, pdTRUE, (void*) 0, HWBlinkyCB);
+
 	xTimerStart( xHWTimer, pdFALSE );
+	xTimerStart( xLedTimer, pdFALSE );
 	return 0;
 }
 
@@ -134,18 +146,34 @@ int init()
 void setLed(hw_t::Led led, bool s)
 {
 	switch(led) {
-		case hw_t::LED_1: PIN_SET(LED_1_CFG, s); break;
-		case hw_t::LED_2: PIN_SET(LED_2_CFG, s); break;
-		case hw_t::LED_3: PIN_SET(LED_3_CFG, s); break;
-		case hw_t::LED_4: PIN_SET(LED_4_CFG, s); break;
-		case hw_t::LED_A: PIN_SET(LED_A_CFG, s); break;
-		case hw_t::LED_PCB: PIN_SET(LED_PCB_CFG, s); break;
+		case hw_t::LED_1: _g_hw.led1 = s; PIN_SET(LED_1_CFG, s); break;
+		case hw_t::LED_2: _g_hw.led2 = s; PIN_SET(LED_2_CFG, s); break;
+		case hw_t::LED_3: _g_hw.led3 = s; PIN_SET(LED_3_CFG, s); break;
+		case hw_t::LED_4: _g_hw.led4 = s; PIN_SET(LED_4_CFG, s); break;
+		case hw_t::LED_A: _g_hw.ledA = s; PIN_SET(LED_A_CFG, s); break;
+		case hw_t::LED_PCB: _g_hw.ledPCB = s; PIN_SET(LED_PCB_CFG, s); break;
 	}
 
+}
+
+void setLedBlink(hw_t::Led led, uint8_t b)
+{
+	switch(led) {
+		case hw_t::LED_1: _g_hw.led1_blinko = b; break;
+		case hw_t::LED_2: _g_hw.led2_blinko = b; break;
+		case hw_t::LED_3: _g_hw.led3_blinko = b; break;
+		case hw_t::LED_4: _g_hw.led4_blinko = b; break;
+		case hw_t::LED_A: _g_hw.ledA_blinko = b; break;
+		case hw_t::LED_PCB: _g_hw.ledPCB_blinko = b; break;
+	}
 }
 
 hw_t *getHW() { return &_g_hw; }
 
 
+void setButtonEventCB(buttonEventCB_ft f)
+{
+	_s_buttonEvent_cb = f;
+}
 
 }

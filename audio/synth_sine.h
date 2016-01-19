@@ -29,16 +29,11 @@
 
 #include "AudioStream.h"
 #include "arm_math.h"
+#include "utils.h"
 
 // TODO: investigate making a high resolution sine wave
 // using Taylor series expansion.
 // http://www.musicdsp.org/showone.php?id=13
-typedef struct _sine_nfo {
-	_sine_nfo() : phase_acc(0), phase_inc(0), magnitude (16384) {}
-	uint32_t phase_acc;
-	uint32_t phase_inc;
-	int32_t magnitude;
-} sine_nfo_t;
 
 #define NSINES_MAX 16
 

@@ -30,7 +30,7 @@ void AudioSynthLorenz::update()
 			ry = m_y + ((-m_x*m_z + m_ro*m_x - m_y) * m_dt);
 			rz = m_z + ((m_x*m_y - m_beta*m_z) * m_dt);
 
-			block->data[i] = (rx / 40)  * 65536;
+			block->data[i] = (ry / 40)  * 65536;
 
 			m_x = rx;
 			m_y = ry;

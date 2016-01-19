@@ -68,6 +68,8 @@ void  fault_isr (void) {
 
 }
 
+#include "synth_add.h"
+	AudioSynthAdditive sine;
 static void prvLEDToggleTask(void *pvParameters)
 {
 	static int toggle = 0;
@@ -76,24 +78,23 @@ static void prvLEDToggleTask(void *pvParameters)
 				toggle = (toggle) ? 0 : 1;
 				TeensyHW::setLed(TeensyHW::hw_t::LED_PCB, toggle);
 				vTaskDelay(500);
+//                int16_t xx = (sine.x / 40) * 65536;
+//                LOG_PRINT(Log::LOG_DEBUG, "lorenz: %d", xx);
 		}
 }
 
 #include "macros.h"
 #include "output_dac.h"
-#include "synth_kdrum.h"
-//#include "synth_sine.h"
 	AudioOutputAnalog dac;
-	AudioKDrum sine;
 	AudioConnection          patchCord1(sine, dac);
 
 static void buttonEventCB(TeensyHW::hw_t::ButtonState s)
 {
-	static bool t = 0;
 	if(s == TeensyHW::hw_t::BUTTON_PRESSED) {
-		t = !t;
-		TeensyHW::setLed(TeensyHW::hw_t::LED_3, t);
-		sine.trigger();
+		TeensyHW::setLed(TeensyHW::hw_t::LED_3, 1);
+//        sine.trigger();
+	} else if (s == TeensyHW::hw_t::BUTTON_RELEASED) {
+		TeensyHW::setLed(TeensyHW::hw_t::LED_3, 0);
 	}
 }
 static void prvUpdateCB( xTimerHandle xTimer )
@@ -104,29 +105,38 @@ static void prvUpdateCB( xTimerHandle xTimer )
 	int tmp;
 	if(fabs(last - n) > 100) {
 		LOG_PRINT(Log::LOG_DEBUG, "setting f to %x", hw->knob.k1/8);
-		sine.frequency(n);
+//        sine.frequency(n);
 		last = n;
 	}
 
 	if(hw->cvAct.cv1) {
-		sine.frequency(hw->cv.cv1 / 8);
+	} else {
+		sine.frequency(0,hw->knob.k1 / 10);
+		sine.frequency(1,hw->knob.k1 / 12);
+		sine.frequency(2,hw->knob.k1 / 16);
+		sine.frequency(3,hw->knob.k1 / 20);
 	}
 	if(hw->cvAct.cv2) {
-//        sine.dec(hw->cv.cv2 / 2);
 	} else {
-		sine.dec(hw->knob.k2 / 2);
+		sine.frequency(4,hw->knob.k2 / 2);
+		sine.frequency(5,hw->knob.k2 / 4);
+		sine.frequency(6,hw->knob.k2 / 8);
+		sine.frequency(7,hw->knob.k2 / 16);
 	}
 //    TeensyHW::setLedBlink(TeensyHW::hw_t::LED_1, hw->knob.k2/8192);
 	if(hw->cvAct.cv3) {
-		sine.finc(hw->cv.cv3 / 6553.0);
 	} else {
-		sine.finc(hw->knob.k3 / 6553.0);
+		sine.frequency(8,hw->knob.k3 / 100);
+		sine.frequency(9,hw->knob.k3 / 120);
+		sine.frequency(10,hw->knob.k3 / 240);
+		sine.frequency(11,hw->knob.k3 / 360);
 	}
 	if(hw->cvAct.cv4) {
-		TeensyHW::setLed(TeensyHW::hw_t::LED_A, 1);
-		sine.trigger();
 	} else {
-		TeensyHW::setLed(TeensyHW::hw_t::LED_A, 0);
+		sine.frequency(12,hw->knob.k4 / 70);
+		sine.frequency(13,hw->knob.k4 / 80);
+		sine.frequency(14,hw->knob.k4 / 90);
+		sine.frequency(15,hw->knob.k4 / 100);
 	}
 
 }
@@ -142,7 +152,7 @@ int blinky()
 	TeensyHW::init();
 	AudioMemory(12);
 //    dac.analogReference(EXTERNAL);
-	sine.frequency(546);
+//    sine.frequency(546);
 //    sine.amplitude(1);
 	TeensyHW::setButtonEventCB(buttonEventCB);
 
@@ -157,7 +167,7 @@ int blinky()
 
 
 
-	xTaskCreate( prvLEDToggleTask, "Rx", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
+	xTaskCreate( prvLEDToggleTask, "Rx", configMINIMAL_STACK_SIZE*2, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
 //    
 	Tasks::ADC::create();
 

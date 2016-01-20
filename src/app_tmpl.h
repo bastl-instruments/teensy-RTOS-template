@@ -13,6 +13,7 @@ extern "C" {
 namespace App
 {
 	void run();
+	void setup();
 }
 #endif
 

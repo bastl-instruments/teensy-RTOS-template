@@ -22,6 +22,7 @@
 #include "src/compat.h"
 
 #include "src/TaskADC.h"
+#include "src/TaskCalibrate.h"
 #include "src/logger.h"
 #include "src/fault_isr.h"
 #include "src/app_tmpl.h"
@@ -42,21 +43,37 @@ static void prvLEDToggleTask(void *pvParameters)
 		}
 }
 
+static void prvInitTask(void *params)
+{
+	// hang until calibration task is done
+	uint32_t val = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+	//
+	// run main app code
+
+	App::run();
+	TeensyHW::setLed(TeensyHW::hw_t::LED_2, 1);
+
+	while(1) {}
+}
+
 extern "C" {
 	// must be extern C to link it properly
 int blinky()
 {
+	TaskHandle_t initTask_handle;
 	// init hardware 
 	Log::init();
 	TeensyHW::init();
 	init_fault_isr();
 
-	// create basic tasks
-	xTaskCreate( prvLEDToggleTask, "Rx", configMINIMAL_STACK_SIZE*2, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
-	Tasks::ADC::create();
-
-	// this is the app-specific code that links controls to audio object parameters
-	App::run();
+	// --  create basic tasks --
+	xTaskCreate( prvLEDToggleTask, "Rx", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL ); // alive LED
+	Tasks::ADC::create();	// continuous ADC conversion
+	// initapp - but only after calibration is done
+	xTaskCreate( prvInitTask, "init", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, &initTask_handle);	
+	// create calibration task
+	Tasks::Calibrate::create(initTask_handle);
+	App::setup();
 
 	// run FreeRTOS
 	vTaskStartScheduler();

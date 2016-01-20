@@ -85,9 +85,13 @@ static void updateCB( xTimerHandle xTimer )
 
 }
 
-void run()
+void setup()
 {
 	AudioMemory(12);
+}
+
+void run()
+{
 	TeensyHW::setButtonEventCB(buttonEventCB);
 
 	xUpdateTimer = xTimerCreate("UpdateCB", 1, pdTRUE, 	( void * ) 0, updateCB);

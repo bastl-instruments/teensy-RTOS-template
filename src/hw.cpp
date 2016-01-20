@@ -132,7 +132,6 @@ int init()
 {
 	__initLeds();
 	__initButtons();
-_g_hw.led1_blinko = 16;
 
 	xHWTimer = xTimerCreate("HWTimer", ( 30 ),  pdTRUE,  ( void * ) 0, HWUpdateTimerCB);
 	xLedTimer = xTimerCreate("LEDTimer", 100, pdTRUE, (void*) 0, HWBlinkyCB);
@@ -174,6 +173,11 @@ hw_t *getHW() { return &_g_hw; }
 void setButtonEventCB(buttonEventCB_ft f)
 {
 	_s_buttonEvent_cb = f;
+}
+
+buttonEventCB_ft getButtonEventCB()
+{
+	return _s_buttonEvent_cb;
 }
 
 }

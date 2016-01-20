@@ -106,10 +106,10 @@ void adc0_isr()
 //    s_ch_vals[s_cur_ch] = ADC0_RA;
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	switch(s_cur_ch) {
-		case KnobChannel::KC_KNOB1: hw->knob.k1 = ADC0_RA; break;
-		case KnobChannel::KC_KNOB2: hw->knob.k2 = ADC0_RA; break;
-		case KnobChannel::KC_KNOB3: hw->knob.k3 = ADC0_RA; break;
-		case KnobChannel::KC_KNOB4: hw->knob.k4 = ADC0_RA; break;
+		case KnobChannel::KC_KNOB1: hw->knob.k1 = (ADC0_RA < hw->knob_cal_min.k1) ? 0 : ADC0_RA - hw->knob_cal_min.k1; break;
+		case KnobChannel::KC_KNOB2: hw->knob.k2 = (ADC0_RA < hw->knob_cal_min.k2) ? 0 : ADC0_RA - hw->knob_cal_min.k2; break;
+		case KnobChannel::KC_KNOB3: hw->knob.k3 = (ADC0_RA < hw->knob_cal_min.k3) ? 0 : ADC0_RA - hw->knob_cal_min.k3; break;
+		case KnobChannel::KC_KNOB4: hw->knob.k4 = (ADC0_RA < hw->knob_cal_min.k4) ? 0 : ADC0_RA - hw->knob_cal_min.k4; break;
 		case KnobChannel::KC_CV1: hw->cv.cv1 = ADC0_RA; break;
 		case KnobChannel::KC_CV2: hw->cv.cv2 = ADC0_RA; break;
 		case KnobChannel::KC_CV3: hw->cv.cv3 = ADC0_RA; break;
@@ -130,7 +130,7 @@ static void ADCTask(void *pvParameters)
 	while(1) {
 		TeensyHW::hw_t *hw = TeensyHW::getHW();
 		LOG_PRINT(Log::LOG_DEBUG, "adc: %04x %04x %04x %04x %04x:%d %04x:%d %04x:%d %04x:%d", 
-				hw->knob.k1, hw->knob.k2,hw->knob.k3,hw->knob.k4,
+				hw->knob.k1,  hw->knob.k2,hw->knob.k3,hw->knob.k4,
 				hw->cv.cv1, hw->cvAct.cv1, 
 				hw->cv.cv2, hw->cvAct.cv2,
 				hw->cv.cv3, hw->cvAct.cv3,

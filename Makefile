@@ -3,7 +3,7 @@
 #  with modifications by Kevin Cuzner
 
 #  Project Name
-PROJECT=blinky
+PROJECT=app_synth_add
 
 #  Project directory structure
 SRCDIR = src
@@ -27,6 +27,8 @@ MCU = mk20dx256
 #  Project C & C++ files which are to be compiled
 CPP_FILES = $(wildcard $(SRCDIR)/*.cpp)
 C_FILES = $(wildcard $(SRCDIR)/*.c) 
+APP_C_FILES = $(wildcard $(PROJECT)/*.c)
+APP_CPP_FILES = $(wildcard $(PROJECT)/*.cpp)
 # C_FILES +=  $(wildcard kinetis_i2c/*.c)
 FREERTOS_FILES = $(wildcard $(FREERTOS_DIR)/*.c) 
 FREERTOS_FILES += $(wildcard $(FREERTOS_DIR)/portable/GCC/ARM_CM3/*.c)
@@ -36,7 +38,8 @@ AUDIOLIB_FILES_C = $(wildcard $(AUDIOLIB_DIR)/*.c)
 
 
 #  Change project C & C++ files into object files
-OBJ_FILES := $(addprefix $(OBJDIR)/,$(notdir $(CPP_FILES:.cpp=.o))) $(addprefix $(OBJDIR)/,$(notdir $(C_FILES:.c=.o)))
+OBJ_FILES := $(addprefix $(OBJDIR)/,$(notdir $(APP_CPP_FILES:.cpp=.o))) $(addprefix $(OBJDIR)/,$(notdir $(APP_C_FILES:.c=.o)))
+OBJ_FILES += $(addprefix $(OBJDIR)/,$(notdir $(CPP_FILES:.cpp=.o))) $(addprefix $(OBJDIR)/,$(notdir $(C_FILES:.c=.o)))
 OBJ_FILES += $(addprefix $(OBJDIR)/,$(notdir $(FREERTOS_FILES:.c=.o))) 
 OBJ_FILES += $(addprefix $(OBJDIR)/,$(notdir $(AUDIOLIB_FILES_CPP:.cpp=.o))) $(addprefix $(OBJDIR)/,$(notdir $(AUDIOLIB_FILES_C:.c=.o)))
 
@@ -260,6 +263,13 @@ $(OBJDIR)/%.o : $(TEENSY3X_BASEPATH)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(GCFLAGS) -c $< -o $@ > $(basename $@).lst
 
+$(OBJDIR)/%.o : $(PROJECT)/%.cpp
+	@mkdir -p $(dir $@)
+	$(CC) $(GCFLAGS) -c $< -o $@
+
+$(OBJDIR)/%.o : $(PROJECT)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(GCFLAGS) -c $< -o $@
 	
 $(OBJDIR)/%.o : $(SRCDIR)/%.cpp
 	@mkdir -p $(dir $@)

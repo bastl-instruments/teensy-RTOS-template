@@ -30,7 +30,7 @@ public:
 	}
 	virtual void update(void);
 
-	virtual void lfo(float f) {
+	virtual void lfo(float freq) {
 		if (freq < 0.0) freq = 0.0;
 		else if (freq > AUDIO_SAMPLE_RATE_EXACT/2) freq = AUDIO_SAMPLE_RATE_EXACT/2;
 		m_lfo.phase_inc = freq * (4294967296.0 / AUDIO_SAMPLE_RATE_EXACT);

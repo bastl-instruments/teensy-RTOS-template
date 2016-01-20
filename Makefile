@@ -3,7 +3,7 @@
 #  with modifications by Kevin Cuzner
 
 #  Project Name
-PROJECT=app_synth_add
+PROJECT=app_kick
 
 #  Project directory structure
 SRCDIR = src

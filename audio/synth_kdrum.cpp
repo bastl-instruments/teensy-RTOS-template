@@ -43,7 +43,7 @@ void AudioKDrum::addSineToBlock(uint32_t n, audio_block_t *block)
 			val2 *= scale;
 			val1 *= 0xFFFF - scale;
 			//block->data[i] = (((val1 + val2) >> 16) * magnitude) >> 16;
-			block->data[i] = multiply_32x32_rshift32(val1 + val2, m_vca.next() * 65536.0);
+			block->data[i] = multiply_32x32_rshift32(val1 + val2, m_vca.next() * 65536.0 + m_distort);
 			nfo->phase_inc -= m_fInc * (4294967296.0 / AUDIO_SAMPLE_RATE_EXACT);
 			ph += nfo->phase_inc;
 		}

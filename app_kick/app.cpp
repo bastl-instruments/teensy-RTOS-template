@@ -65,6 +65,7 @@ static void updateCB( xTimerHandle xTimer )
 	} else {
 		kick.finc(hw->knob.k3 / 6553.0);
 	}
+	kick.setDistort(hw->knob.k4 / 10.0);
 	if(hw->cvAct.cv4) {
 		if((t - s_last_trigger) > TRIGGER_DLY_MIN) {
 			kick.trigger();

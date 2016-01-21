@@ -55,6 +55,7 @@ public:
 	}
 	void dec(uint16_t samples) { m_vca.setLength(samples); }
 	void trigger() { _updateFInternal(m_fBase); m_vca.reset(); }
+	void setDistort(uint16_t d) { m_distort = d; }
 
 	float fse() { return m_vca.m_state; }
 	float fsp() { return m_vca.m_step; }
@@ -66,6 +67,7 @@ private:
 	sine_nfo_t m_nfo;
 	float m_fInc;
 	float m_fBase;
+	uint16_t m_distort;
 	VCA	m_vca;
 };
 #endif

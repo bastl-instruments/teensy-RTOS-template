@@ -80,10 +80,6 @@ namespace Calibrate {
 
 		TeensyHW::setButtonEventCB(buttonEventCB);
 
-		// -> update MIN value of the pots, store into EEPROM
-		// enter blink routine no 2, wait for button press
-		// -> update MAX value
-		// notify init task we are done
 		while(1) {
 			switch(cal_state)	{
 				case CalState::CAL_INIT: 
@@ -92,10 +88,13 @@ namespace Calibrate {
 				else cal_state = CAL_SET_MIN;
 				break;
 				case CalState::CAL_SET_MIN:
+				// -> update MIN value of the pots
 					__cal_set_min(hw, cal_state); break;
 				case CalState::CAL_SET_MAX:
+				// -> update MAX value
 					__cal_set_max(hw, cal_state); break;
 				case CalState::CAL_ADJUST:
+				// write to EEPROM, set adjust value
 					TeensyHW::EEWriteCal();
 					TeensyHW::adjustKnobs();
 					cal_state = CAL_END;

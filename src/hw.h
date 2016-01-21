@@ -63,12 +63,12 @@ typedef struct hw_ {
 		BUTTON_HOLD		=	3
 	};
 	enum Led {
-		LED_1,
-		LED_2,
-		LED_3,
-		LED_4,
-		LED_A,
-		LED_PCB
+		LED_1	=	1,
+		LED_2	=	2,
+		LED_3	=	3,
+		LED_4	=	4,
+		LED_A	=	10,
+		LED_PCB =	20
 	};
 
 	uint8_t led1_blinko;

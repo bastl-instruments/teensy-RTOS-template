@@ -52,21 +52,23 @@ namespace Calibrate {
 			switch(cal_state)	{
 				case CalState::CAL_INIT: 
 				// wait 500 ms for button event
-				if(ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(500)) == 0)  { cal_state = CAL_END;  } // timeout 
+				if(ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(2500)) == 0)  { cal_state = CAL_END;  } // timeout 
 				else cal_state = CAL_SET_MIN;
 				break;
 				case CalState::CAL_SET_MIN:
 				// wait for another button event that signals us to read the ADC values
-				TeensyHW::setLed(TeensyHW::hw_t::LED_1, 1);
-				TeensyHW::setLed(TeensyHW::hw_t::LED_2, 1);
-				TeensyHW::setLed(TeensyHW::hw_t::LED_3, 1);
-				TeensyHW::setLed(TeensyHW::hw_t::LED_4, 1);
-				ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+				if(ulTaskNotifyTake(pdTRUE, 250) == 0) { 
+					static int xi = 0;
+					TeensyHW::setLed((TeensyHW::hw_t::Led)(xi+1), 0);
+					xi = (xi+1) % 4;
+					TeensyHW::setLed((TeensyHW::hw_t::Led)(xi+1), 1);
+					break;
+				} 
+				// update min value
 				hw->knob_cal_min.k1 = hw->knob.k1;
 				hw->knob_cal_min.k2 = hw->knob.k2;
 				hw->knob_cal_min.k3 = hw->knob.k3;
 				hw->knob_cal_min.k4 = hw->knob.k4;
-				
 				cal_state = CAL_END;
 				case CalState::CAL_END: 
 					// signal we are done

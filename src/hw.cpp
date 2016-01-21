@@ -92,6 +92,7 @@ void portd_isr(void)
 
 void HWUpdateTimerCB(xTimerHandle xT)
 {
+	// -- update button state --
 	_g_hw.button_i = ((GPIOC_PDIR & (1<<7)) == 0) ? MIN(BUTTON_I_MAX,_g_hw.button_i+1) : MAX(0,_g_hw.button_i-1);
 	if(_g_hw.button_i == 0) {
 		_g_hw.button_s = 0;
@@ -105,6 +106,10 @@ void HWUpdateTimerCB(xTimerHandle xT)
 			((_g_hw.button == hw_t::BUTTON_PRESSED) || 
 			 (_g_hw.button == hw_t::BUTTON_HOLD) || 
 			 (_g_hw.button == hw_t::BUTTON_RELEASED))) _s_buttonEvent_cb((TeensyHW::hw_t::ButtonState)_g_hw.button);
+
+
+	// -- update switch state --
+//    _g_hw.switch3 = (GPIOC_PDIR & (1<<7) | (GPIOD_PDIR & (1<<0));
 
 }
 
@@ -154,6 +159,7 @@ void setLed(hw_t::Led led, bool s)
 	}
 
 }
+
 
 void setLedBlink(hw_t::Led led, uint8_t b)
 {

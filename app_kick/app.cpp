@@ -31,6 +31,7 @@ static AudioConnection          patchCord1(kick, dac);
 namespace App {
 
 static xTimerHandle xUpdateTimer = NULL;
+static uint32_t s_last_trigger = 0;
 
 static void buttonEventCB(TeensyHW::hw_t::ButtonState s)
 {
@@ -42,10 +43,12 @@ static void buttonEventCB(TeensyHW::hw_t::ButtonState s)
 	}
 }
 
+#define TRIGGER_DLY_MIN	100
 
 static void updateCB( xTimerHandle xTimer )
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
+	uint32_t t = millis();
 
 	if(hw->cvAct.cv1) {
 		kick.frequency(hw->cv.cv1 / 20.0);
@@ -63,7 +66,10 @@ static void updateCB( xTimerHandle xTimer )
 		kick.finc(hw->knob.k3 / 6553.0);
 	}
 	if(hw->cvAct.cv4) {
-		kick.trigger();
+		if((t - s_last_trigger) > TRIGGER_DLY_MIN) {
+			kick.trigger();
+			s_last_trigger = t;
+		}
 		TeensyHW::setLed(TeensyHW::hw_t::LED_A, 1);
 	} else {
 		TeensyHW::setLed(TeensyHW::hw_t::LED_A, 0);

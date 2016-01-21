@@ -53,6 +53,7 @@ OBJ_FILES += $(OBJDIR)/pins_teensy.o $(OBJDIR)/analog.o
 OBJ_FILES += $(OBJDIR)/nonstd.o
 OBJ_FILES += $(OBJDIR)/DMAChannel.o
 OBJ_FILES += $(OBJDIR)/AudioStream.o
+OBJ_FILES += $(OBJDIR)/eeprom.o
 # $(OBJDIR)/yield.o 
 
 #  Next we need to define some things in order for Teensyduino to work.
@@ -210,7 +211,7 @@ clean:
 	$(REMOVE) $(OUTPUTDIR)
 
 upload: $(OUTPUTDIR)/$(PROJECT).hex
-	teensy_loader_cli -mmcu=$(MCU) -w -v  $(OUTPUTDIR)/$(PROJECT).hex
+	teensy_loader_cli -mmcu=$(MCU) -s -w -v  $(OUTPUTDIR)/$(PROJECT).hex
 
 #  The toolvers target provides a sanity check, so you can determine
 #  exactly which version of each tool will be used when you build.

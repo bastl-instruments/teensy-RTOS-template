@@ -29,12 +29,48 @@ namespace Calibrate {
 	enum CalState {
 		CAL_INIT	 	= 	0,
 		CAL_SET_MIN	=	1,
+		CAL_SET_MAX	=	2,
+		CAL_ADJUST	=	3,
 		CAL_END			=	100
 	};
 
 	static void buttonEventCB(TeensyHW::hw_t::ButtonState s)
 	{
 		if((s_xCalTask != NULL) && (s == TeensyHW::hw_t::BUTTON_RELEASED)) xTaskNotifyGive(s_xCalTask);
+	}
+
+	static inline void __cal_set_min(TeensyHW::hw_t *hw, enum CalState &cal_state) {
+		// wait for another button event that signals us to read the ADC values
+		if(ulTaskNotifyTake(pdTRUE, 250) == 0) { 
+			static int xi = 0;
+			TeensyHW::setLed((TeensyHW::hw_t::Led)(xi+1), 0);
+			xi = (xi+1) % 4;
+			TeensyHW::setLed((TeensyHW::hw_t::Led)(xi+1), 1);
+		} else {
+			// update min value
+			hw->knob_cal_min.k1 = hw->knob.k1;
+			hw->knob_cal_min.k2 = hw->knob.k2;
+			hw->knob_cal_min.k3 = hw->knob.k3;
+			hw->knob_cal_min.k4 = hw->knob.k4;
+			cal_state = CAL_SET_MAX;
+		}
+	}
+
+	static inline void __cal_set_max(TeensyHW::hw_t *hw, enum CalState &cal_state) {
+		// wait for another button event that signals us to read the ADC values
+		if(ulTaskNotifyTake(pdTRUE, 250) == 0) { 
+			static int xi = 0;
+			TeensyHW::setLed((TeensyHW::hw_t::Led)(4-xi), 0);
+			xi = (xi+1) % 4;
+			TeensyHW::setLed((TeensyHW::hw_t::Led)(4-xi), 1);
+		} else {
+			// update min value
+			hw->knob_cal_max.k1 = hw->knob.k1;
+			hw->knob_cal_max.k2 = hw->knob.k2;
+			hw->knob_cal_max.k3 = hw->knob.k3;
+			hw->knob_cal_max.k4 = hw->knob.k4;
+			cal_state = CAL_ADJUST;
+		}
 	}
 
 	static void CalTask(void *param) {
@@ -56,20 +92,14 @@ namespace Calibrate {
 				else cal_state = CAL_SET_MIN;
 				break;
 				case CalState::CAL_SET_MIN:
-				// wait for another button event that signals us to read the ADC values
-				if(ulTaskNotifyTake(pdTRUE, 250) == 0) { 
-					static int xi = 0;
-					TeensyHW::setLed((TeensyHW::hw_t::Led)(xi+1), 0);
-					xi = (xi+1) % 4;
-					TeensyHW::setLed((TeensyHW::hw_t::Led)(xi+1), 1);
-					break;
-				} 
-				// update min value
-				hw->knob_cal_min.k1 = hw->knob.k1;
-				hw->knob_cal_min.k2 = hw->knob.k2;
-				hw->knob_cal_min.k3 = hw->knob.k3;
-				hw->knob_cal_min.k4 = hw->knob.k4;
-				cal_state = CAL_END;
+					__cal_set_min(hw, cal_state); break;
+				case CalState::CAL_SET_MAX:
+					__cal_set_max(hw, cal_state); break;
+				case CalState::CAL_ADJUST:
+					TeensyHW::EEWriteCal();
+					TeensyHW::adjustKnobs();
+					cal_state = CAL_END;
+				break;
 				case CalState::CAL_END: 
 					// signal we are done
 					TeensyHW::setLed(TeensyHW::hw_t::LED_1, 0);

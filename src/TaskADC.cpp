@@ -106,10 +106,10 @@ void adc0_isr()
 //    s_ch_vals[s_cur_ch] = ADC0_RA;
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	switch(s_cur_ch) {
-		case KnobChannel::KC_KNOB1: hw->knob.k1 = (ADC0_RA < hw->knob_cal_min.k1) ? 0 : ADC0_RA - hw->knob_cal_min.k1; break;
-		case KnobChannel::KC_KNOB2: hw->knob.k2 = (ADC0_RA < hw->knob_cal_min.k2) ? 0 : ADC0_RA - hw->knob_cal_min.k2; break;
-		case KnobChannel::KC_KNOB3: hw->knob.k3 = (ADC0_RA < hw->knob_cal_min.k3) ? 0 : ADC0_RA - hw->knob_cal_min.k3; break;
-		case KnobChannel::KC_KNOB4: hw->knob.k4 = (ADC0_RA < hw->knob_cal_min.k4) ? 0 : ADC0_RA - hw->knob_cal_min.k4; break;
+		case KnobChannel::KC_KNOB1: hw->knob.k1 =  (ADC0_RA < hw->knob_cal_min.k1) ? 0 : ((ADC0_RA > hw->knob_cal_max.k1) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k1) * hw->knob_adjust.k1); break;
+		case KnobChannel::KC_KNOB2: hw->knob.k2 =  (ADC0_RA < hw->knob_cal_min.k2) ? 0 : ((ADC0_RA > hw->knob_cal_max.k2) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k2) * hw->knob_adjust.k2); break;
+		case KnobChannel::KC_KNOB3: hw->knob.k3 =  (ADC0_RA < hw->knob_cal_min.k3) ? 0 : ((ADC0_RA > hw->knob_cal_max.k3) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k3) * hw->knob_adjust.k3); break;
+		case KnobChannel::KC_KNOB4: hw->knob.k4 =  (ADC0_RA < hw->knob_cal_min.k4) ? 0 : ((ADC0_RA > hw->knob_cal_max.k4) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k4) * hw->knob_adjust.k4); break;
 		case KnobChannel::KC_CV1: hw->cv.cv1 = ADC0_RA; break;
 		case KnobChannel::KC_CV2: hw->cv.cv2 = ADC0_RA; break;
 		case KnobChannel::KC_CV3: hw->cv.cv3 = ADC0_RA; break;

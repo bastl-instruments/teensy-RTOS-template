@@ -44,6 +44,18 @@ typedef struct hw_ {
 		uint16_t k4;
 	} knob_cal_min;
 	struct  {
+		uint16_t k1;
+		uint16_t k2;
+		uint16_t k3;
+		uint16_t k4;
+	} knob_cal_max;
+	struct {
+		float k1;
+		float k2;
+		float k3;
+		float k4;
+	} knob_adjust;
+	struct  {
 		uint16_t cv1;
 		uint16_t cv2;
 		uint16_t cv3;
@@ -87,6 +99,9 @@ extern void setLedBlink(hw_t::Led led, uint8_t b);
 extern hw_t *getHW();
 extern void setButtonEventCB(buttonEventCB_ft f);
 extern buttonEventCB_ft getButtonEventCB();
+extern void EEWriteCal();
+extern void EEReadCal();
+extern void adjustKnobs();
 
 }
 

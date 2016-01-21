@@ -19,6 +19,8 @@
 
 /* local includes */
 #include "macros.h"
+#include "avr_functions.h"
+#include "src/eeprom_addr.h"
 
 
 namespace TeensyHW {
@@ -132,11 +134,22 @@ static void __initButtons()
 	INIT_INPUT(SWITCH_PIN_B);
 }
 
+void adjustKnobs()
+{
+	_g_hw.knob_adjust.k1 = 65535.0 / (_g_hw.knob_cal_max.k1 - _g_hw.knob_cal_min.k1);
+	_g_hw.knob_adjust.k2 = 65535.0 / (_g_hw.knob_cal_max.k2 - _g_hw.knob_cal_min.k2);
+	_g_hw.knob_adjust.k3 = 65535.0 / (_g_hw.knob_cal_max.k3 - _g_hw.knob_cal_min.k3);
+	_g_hw.knob_adjust.k4 = 65535.0 / (_g_hw.knob_cal_max.k4 - _g_hw.knob_cal_min.k4);
+}
 
 int init()
 {
 	__initLeds();
 	__initButtons();
+	eeprom_initialize();
+	EEReadCal();
+	adjustKnobs();
+
 
 	xHWTimer = xTimerCreate("HWTimer", ( 30 ),  pdTRUE,  ( void * ) 0, HWUpdateTimerCB);
 	xLedTimer = xTimerCreate("LEDTimer", 100, pdTRUE, (void*) 0, HWBlinkyCB);
@@ -184,6 +197,18 @@ void setButtonEventCB(buttonEventCB_ft f)
 buttonEventCB_ft getButtonEventCB()
 {
 	return _s_buttonEvent_cb;
+}
+
+void EEWriteCal()
+{
+	eeprom_write_block(&_g_hw.knob_cal_min, EEPROM_ADDR_CALMIN, sizeof(_g_hw.knob_cal_min));
+	eeprom_write_block(&_g_hw.knob_cal_max, EEPROM_ADDR_CALMAX, sizeof(_g_hw.knob_cal_max));
+}
+
+void EEReadCal()
+{
+	eeprom_read_block(&_g_hw.knob_cal_min, EEPROM_ADDR_CALMIN, sizeof(_g_hw.knob_cal_min));
+	eeprom_read_block(&_g_hw.knob_cal_max, EEPROM_ADDR_CALMAX, sizeof(_g_hw.knob_cal_max));
 }
 
 }

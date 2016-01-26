@@ -32,18 +32,21 @@ static void updateCB( xTimerHandle xTimer )
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 
 	if(hw->cvAct.cv1) {
+		synth.setFrequency(hw->cv.cv1 / 20);
 	} else {
-		synth.setFrequency(hw->knob.k1 / 20.0);
+		synth.setFrequency(hw->knob.k1 / 20);
 	}
 	if(hw->cvAct.cv2) {
+		synth.setModFrequency(hw->cv.cv2 / 20);
 	} else {
-		synth.setModFrequency(hw->knob.k2 / 200.0);
+		synth.setModFrequency(hw->knob.k2 / 200);
 	}
 	if(hw->cvAct.cv3) {
 	} else {
 	}
 	if(hw->cvAct.cv4) {
 	} else {
+		synth.setRepeat(hw->knob.k4 / 10240);
 	}
 
 }
@@ -53,10 +56,8 @@ static void prvGranuloTask(void *pvParameters)
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	while(1) {
-		TeensyHW::setLed(TeensyHW::hw_t::LED_4, 1);
 		vTaskDelay(hw->knob.k3 / 1000);
 		synth.trigger();
-		TeensyHW::setLed(TeensyHW::hw_t::LED_4, 0);
 	}
 }
 
@@ -74,6 +75,7 @@ void setup()
 	AudioMemory(12);
 	synth.setFrequency(1000);
 	synth.setModFrequency(20);
+	synth.setActiveLayers(8);
 }
 void run()
 {

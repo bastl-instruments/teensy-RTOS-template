@@ -124,8 +124,8 @@ INCDIRS += -I.
 LSCRIPT = mk20dx256.ld
 
 
-OPTIMIZATION = 0
-DEBUG = -g
+OPTIMIZATION = 3
+DEBUG = 
 
 #  List the directories to be searched for libraries during linking.
 #  Optionally, list archives (libxxx.a) to be included during linking.

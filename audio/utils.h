@@ -32,6 +32,11 @@ class DDS {
 			TRIANGLE
 		};
 		DDS() : m_acc(0), m_inc(0), m_mag(32767), m_waveform(SINE), m_cycles(0), m_cycles_max(0) {}
+		void setFrequency(uint16_t freq) {
+			if (freq < 0.0) freq = 0.0;
+			else if (freq > AUDIO_SAMPLE_RATE_EXACT/2) freq = AUDIO_SAMPLE_RATE_EXACT/2;
+			m_inc = freq * (4294967296.0 / AUDIO_SAMPLE_RATE_EXACT);
+		}
 		void setFrequency(float freq) {
 			if (freq < 0.0) freq = 0.0;
 			else if (freq > AUDIO_SAMPLE_RATE_EXACT/2) freq = AUDIO_SAMPLE_RATE_EXACT/2;

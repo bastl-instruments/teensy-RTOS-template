@@ -11,24 +11,30 @@ extern "C" {
 #ifdef __cplusplus
 }
 
-#define NSINES_MAX 4
 
 #include "AudioStream.h"
 #include "arm_math.h"
 #include "utils.h"
 
+#define LAYERS_MAX	8
 
 class AudioSynthGranular: public AudioStream
 {
 public:
-	AudioSynthGranular() : AudioStream(0, NULL), m_source() {m_source.setType(DDS::TRIANGLE); m_mod.setType(DDS::TRIANGLE); }
+	AudioSynthGranular();
 	virtual void update(void);
-	void setFrequency(float f) { m_source.setFrequency(f); }
-	void setModFrequency(float f) { m_mod.setFrequency(f); }
-	void trigger() { m_mod.m_cycles_max = 1; m_mod.m_cycles = 0; }
+	void setFrequency(float f);
+	void setModFrequency(float f);
+	void trigger();
+	void setRepeat(uint8_t r);
+
+	void setActiveLayers(uint8_t n);
 private:
-	DDS	m_source;
-	DDS	m_mod;
+	DDS	m_source[LAYERS_MAX];
+	DDS	m_mod[LAYERS_MAX];
+
+	uint8_t m_activeLayers;
+	uint8_t m_repeat;
 };
 #endif
 

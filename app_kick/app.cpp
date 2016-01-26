@@ -58,14 +58,14 @@ static void updateCB( xTimerHandle xTimer )
 	if(hw->cvAct.cv2) {
 		kick.dec(hw->cv.cv2 / 32.0);
 	} else {
-		kick.dec(hw->knob.k2 /32.0);
+		kick.dec(hw->knob.k2 / 32.0);
 	}
 	if(hw->cvAct.cv3) {
 		kick.dec(hw->cv.cv3 / 6553.0);
 	} else {
 		kick.finc(hw->knob.k3 / 6553.0);
 	}
-	kick.setDistort(hw->knob.k4 / 10.0);
+	kick.setDistort(hw->knob.k4);
 	if(hw->cvAct.cv4) {
 		if((t - s_last_trigger) > TRIGGER_DLY_MIN) {
 			kick.trigger();

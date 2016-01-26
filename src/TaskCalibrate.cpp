@@ -84,7 +84,7 @@ namespace Calibrate {
 			switch(cal_state)	{
 				case CalState::CAL_INIT: 
 				// wait 500 ms for button event
-				if(ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(2500)) == 0)  { cal_state = CAL_END;  } // timeout 
+				if(ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(500)) == 0)  { cal_state = CAL_END;  } // timeout 
 				else cal_state = CAL_SET_MIN;
 				break;
 				case CalState::CAL_SET_MIN:

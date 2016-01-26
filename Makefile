@@ -3,7 +3,7 @@
 #  with modifications by Kevin Cuzner
 
 #  Project Name
-PROJECT=app_kick
+PROJECT=app_synth_granular
 
 #  Project directory structure
 SRCDIR = src

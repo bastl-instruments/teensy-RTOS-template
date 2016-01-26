@@ -12,13 +12,8 @@ extern "C" {
 }
 #include "AudioStream.h"
 #include "arm_math.h"
+#include "utils.h"
 
-typedef struct _sine_nfo {
-	_sine_nfo() : phase_acc(0), phase_inc(0), magnitude (16384) {}
-	uint32_t phase_acc;
-	uint32_t phase_inc;
-	int32_t magnitude;
-} sine_nfo_t;
 
 //
 // linear decay stretched on X samples

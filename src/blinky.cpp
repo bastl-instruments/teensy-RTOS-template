@@ -28,7 +28,6 @@
 #include "src/app_tmpl.h"
 
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
-#define UARTLog_Task_Priority				( tskIDLE_PRIORITY + 2 )
 #define mainDONT_BLOCK	(0)
 
 // this simply toggles PCB led every 500 ms, to show the OS is alive

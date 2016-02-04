@@ -3,7 +3,7 @@
 #  with modifications by Kevin Cuzner
 
 #  Project Name
-PROJECT=app_synth_granular
+PROJECT=app_synth_braids
 
 #  Project directory structure
 SRCDIR = src
@@ -28,7 +28,7 @@ MCU = mk20dx256
 CPP_FILES = $(wildcard $(SRCDIR)/*.cpp)
 C_FILES = $(wildcard $(SRCDIR)/*.c) 
 APP_C_FILES = $(wildcard $(PROJECT)/*.c)
-APP_CPP_FILES = $(wildcard $(PROJECT)/*.cpp)
+APP_CPP_FILES = $(wildcard $(PROJECT)/*.cpp) 
 # C_FILES +=  $(wildcard kinetis_i2c/*.c)
 FREERTOS_FILES = $(wildcard $(FREERTOS_DIR)/*.c) 
 FREERTOS_FILES += $(wildcard $(FREERTOS_DIR)/portable/GCC/ARM_CM3/*.c)
@@ -38,7 +38,7 @@ AUDIOLIB_FILES_C = $(wildcard $(AUDIOLIB_DIR)/*.c)
 
 
 #  Change project C & C++ files into object files
-OBJ_FILES := $(addprefix $(OBJDIR)/,$(notdir $(APP_CPP_FILES:.cpp=.o))) $(addprefix $(OBJDIR)/,$(notdir $(APP_C_FILES:.c=.o)))
+OBJ_FILES := $(addprefix $(OBJDIR)/,$(notdir $(APP_CPP_FILES:.cpp=.o))) $(addprefix $(OBJDIR)/,$(notdir $(APP_C_FILES:.c=.o))) 
 OBJ_FILES += $(addprefix $(OBJDIR)/,$(notdir $(CPP_FILES:.cpp=.o))) $(addprefix $(OBJDIR)/,$(notdir $(C_FILES:.c=.o)))
 OBJ_FILES += $(addprefix $(OBJDIR)/,$(notdir $(FREERTOS_FILES:.c=.o))) 
 OBJ_FILES += $(addprefix $(OBJDIR)/,$(notdir $(AUDIOLIB_FILES_CPP:.cpp=.o))) $(addprefix $(OBJDIR)/,$(notdir $(AUDIOLIB_FILES_C:.c=.o)))
@@ -111,7 +111,7 @@ VPATH = $(TEENSY3X_BASEPATH)
 INCDIRS  = -I$(GCC_INC)
 INCDIRS += -I$(TEENSY3X_INC)
 INCDIRS += -I$(FREERTOS_INC)
-INCDIRS += $(AUDIOLIB_INC)
+INCDIRS += -I$(PROJECT)
 
 INCDIRS += -I/home/xoza/src-old/arduino-1.6.5-r5/hardware/teensy/avr/libraries/SPI/
 INCDIRS += -I/home/xoza/src-old/arduino-1.6.5-r5/hardware/teensy/avr/libraries/Wire/
@@ -267,6 +267,7 @@ $(OBJDIR)/%.o : $(TEENSY3X_BASEPATH)/%.c
 $(OBJDIR)/%.o : $(PROJECT)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CC) $(GCFLAGS) -c $< -o $@
+
 
 $(OBJDIR)/%.o : $(PROJECT)/%.c
 	@mkdir -p $(dir $@)

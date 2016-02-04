@@ -16,7 +16,7 @@ extern "C" {
 #include "arm_math.h"
 #include "utils.h"
 
-#define LAYERS_MAX	8
+#define LAYERS_MAX	12
 
 class AudioSynthGranular: public AudioStream
 {

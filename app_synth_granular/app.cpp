@@ -22,14 +22,17 @@
 #include "src/hw.h"
 #include "src/macros.h"
 
+#define TRIGGER_DLY_MIN	100
 static AudioSynthGranular synth;
 static AudioOutputAnalog dac;
 static AudioConnection   patchCord1(synth, dac);
 namespace App {
 static xTimerHandle xUpdateTimer = NULL;
+static uint32_t s_last_trigger = 0;
 static void updateCB( xTimerHandle xTimer )
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
+	uint32_t t = millis();
 
 	if(hw->cvAct.cv1) {
 		synth.setFrequency(hw->cv.cv1 / 20);
@@ -45,7 +48,13 @@ static void updateCB( xTimerHandle xTimer )
 	} else {
 	}
 	if(hw->cvAct.cv4) {
+		if((t - s_last_trigger) > TRIGGER_DLY_MIN) {
+			synth.trigger();
+			s_last_trigger = t;
+		}
+		TeensyHW::setLed(TeensyHW::hw_t::LED_A, 1);
 	} else {
+		TeensyHW::setLed(TeensyHW::hw_t::LED_A, 0);
 		synth.setRepeat(hw->knob.k4 / 10240);
 	}
 
@@ -75,7 +84,7 @@ void setup()
 	AudioMemory(12);
 	synth.setFrequency(1000);
 	synth.setModFrequency(20);
-	synth.setActiveLayers(8);
+	synth.setActiveLayers(10);
 }
 void run()
 {

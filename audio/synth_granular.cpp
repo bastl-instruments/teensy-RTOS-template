@@ -54,7 +54,7 @@ void AudioSynthGranular::setModFrequency(float f)
 {
 	for(int i = 0; i < m_activeLayers; i++) {
 		m_mod[i].setFrequency(f);
-		f *= 1.01;
+		f *= 1.02;
 	}
 }
 

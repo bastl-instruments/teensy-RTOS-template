@@ -128,6 +128,7 @@ static TaskHandle_t s_xCVActTask = NULL;
 static void ADCTask(void *pvParameters)
 {
 	while(1) {
+		vTaskDelay(2000);
 		TeensyHW::hw_t *hw = TeensyHW::getHW();
 		LOG_PRINT(Log::LOG_DEBUG, "adc: %04x %04x %04x %04x %04x:%d %04x:%d %04x:%d %04x:%d", 
 				hw->knob.k1,  hw->knob.k2,hw->knob.k3,hw->knob.k4,
@@ -136,7 +137,6 @@ static void ADCTask(void *pvParameters)
 				hw->cv.cv3, hw->cvAct.cv3,
 				hw->cv.cv4, hw->cvAct.cv4
 				);
-		vTaskDelay(100);
 	}
 }
 

@@ -40,6 +40,7 @@ int init()
 }
 
 	
+#include "usb_dev.h"
 void print(loglevel_t lvl, const char *file, int line, const char *fmt, ...) 
 {
 #ifdef USB_LOG
@@ -47,11 +48,10 @@ void print(loglevel_t lvl, const char *file, int line, const char *fmt, ...)
 	if(usb_serial_write_buffer_free() == 0) return;
 
 	if(xSemaphoreTake(s_logSem, 10) == pdFALSE) return;
-	GPIOD_PSOR = 1<<4;
 
 	int size;
 	// print time of log
-	size = sniprintf(s_logbuf, LOGBUF_SIZE, "[%08ld] ",  millis());
+	size = sniprintf(s_logbuf, LOGBUF_SIZE, "%d [%08ld] ", usb_tx_packet_count(CDC_TX_ENDPOINT),  millis());
 	usb_serial_write(s_logbuf, size);
 	
 //     print loglevel
@@ -80,7 +80,6 @@ void print(loglevel_t lvl, const char *file, int line, const char *fmt, ...)
 
 	usb_serial_putchar('\n');
 	xSemaphoreGive(s_logSem);
-	GPIOD_PCOR = 1<<4;
 #endif
 }
 

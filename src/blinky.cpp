@@ -33,6 +33,7 @@
 // this simply toggles PCB led every 500 ms, to show the OS is alive
 static void prvLEDToggleTask(void *pvParameters)
 {
+	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	static int toggle = 0;
 	while(1)
 		{
@@ -52,9 +53,9 @@ static void prvInitTask(void *params)
 	App::run();
 	TeensyHW::setLed(TeensyHW::hw_t::LED_2, 1);
 
-	while(1) {}
+	while(1) vTaskDelete(xTaskGetCurrentTaskHandle());
 }
-
+#include "usb_dev.h"
 extern "C" {
 	// must be extern C to link it properly
 int blinky()
@@ -66,7 +67,7 @@ int blinky()
 	init_fault_isr();
 
 	// --  create basic tasks --
-	xTaskCreate( prvLEDToggleTask, "Rx", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL ); // alive LED
+	xTaskCreate( prvLEDToggleTask, "Rx", configMINIMAL_STACK_SIZE*2, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL ); // alive LED
 	Tasks::ADC::create();	// continuous ADC conversion
 	// initapp - but only after calibration is done
 	xTaskCreate( prvInitTask, "init", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, &initTask_handle);	

@@ -22,12 +22,15 @@ public:
 	virtual void update(void);
 
 	void setPitch(int16_t pitch) { m_osc.set_pitch(pitch); }
-	void setParams(int16_t p1, int16_t p2) { m_osc.set_parameters(p1, p2); }
 	void setShape(uint8_t shape);
+	void setParam1(int16_t p) { m_p1 = p; m_osc.set_parameters(m_p1, m_p2); }
+	void setParam2(int16_t p) { m_p2 = p; m_osc.set_parameters(m_p1, m_p2); }
 
 	void trigger() { m_osc.Strike(); }
 private:
 	braids::MacroOscillator m_osc;
+	int16_t m_p1;
+	int16_t m_p2;
 	uint8_t m_sync_buffer[kAudioBlockSize];
 };
 #endif

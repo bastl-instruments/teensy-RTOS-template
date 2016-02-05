@@ -34,8 +34,8 @@
 #define BRAIDS_RESOURCES_H_
 
 
-//#include "stmlib/stmlib.h"
-#include <stdint.h>
+#include "stmlib/stmlib.h"
+
 
 
 namespace braids {
@@ -72,9 +72,7 @@ extern const uint16_t lut_flute_body_filter[];
 extern const uint16_t lut_fm_frequency_quantizer[];
 extern const uint16_t lut_vco_detune[];
 extern const uint16_t lut_bell[];
-extern const uint16_t lut_fof_envelope[];
 extern const uint16_t lut_env_expo[];
-extern const int16_t lut_blep[];
 extern const int16_t lut_blowing_jet[];
 extern const uint32_t lut_oscillator_increments[];
 extern const uint32_t lut_oscillator_delays[];
@@ -97,10 +95,7 @@ extern const int16_t wav_bandlimited_comb_11[];
 extern const int16_t wav_bandlimited_comb_12[];
 extern const int16_t wav_bandlimited_comb_13[];
 extern const int16_t wav_bandlimited_comb_14[];
-extern const int16_t wav_bandlimited_comb_15[];
-extern const int16_t wav_bandlimited_comb_16[];
 extern const int16_t ws_moderate_overdrive[];
-extern const int16_t ws_slight_overdrive[];
 extern const int16_t ws_violent_overdrive[];
 extern const int16_t ws_sine_fold[];
 extern const int16_t ws_tri_fold[];
@@ -110,9 +105,9 @@ extern const uint8_t wt_code[];
 extern const uint16_t chr_characters[];
 #define STR_DUMMY 0  // dummy
 #define LUT_RESONATOR_COEFFICIENT 0
-#define LUT_RESONATOR_COEFFICIENT_SIZE 257
+#define LUT_RESONATOR_COEFFICIENT_SIZE 129
 #define LUT_RESONATOR_SCALE 1
-#define LUT_RESONATOR_SCALE_SIZE 257
+#define LUT_RESONATOR_SCALE_SIZE 129
 #define LUT_SVF_CUTOFF 2
 #define LUT_SVF_CUTOFF_SIZE 257
 #define LUT_SVF_DAMP 3
@@ -128,7 +123,7 @@ extern const uint16_t chr_characters[];
 #define LUT_BOWING_FRICTION 8
 #define LUT_BOWING_FRICTION_SIZE 257
 #define LUT_BLOWING_ENVELOPE 9
-#define LUT_BLOWING_ENVELOPE_SIZE 752
+#define LUT_BLOWING_ENVELOPE_SIZE 392
 #define LUT_FLUTE_BODY_FILTER 10
 #define LUT_FLUTE_BODY_FILTER_SIZE 128
 #define LUT_FM_FREQUENCY_QUANTIZER 11
@@ -137,13 +132,9 @@ extern const uint16_t chr_characters[];
 #define LUT_VCO_DETUNE_SIZE 257
 #define LUT_BELL 13
 #define LUT_BELL_SIZE 257
-#define LUT_FOF_ENVELOPE 14
-#define LUT_FOF_ENVELOPE_SIZE 1025
-#define LUT_ENV_EXPO 15
+#define LUT_ENV_EXPO 14
 #define LUT_ENV_EXPO_SIZE 257
-#define LUT_BLEP 0
-#define LUT_BLEP_SIZE 5429
-#define LUT_BLOWING_JET 1
+#define LUT_BLOWING_JET 0
 #define LUT_BLOWING_JET_SIZE 257
 #define LUT_OSCILLATOR_INCREMENTS 0
 #define LUT_OSCILLATOR_INCREMENTS_SIZE 97
@@ -187,25 +178,13 @@ extern const uint16_t chr_characters[];
 #define WAV_BANDLIMITED_COMB_13_SIZE 257
 #define WAV_BANDLIMITED_COMB_14 17
 #define WAV_BANDLIMITED_COMB_14_SIZE 257
-#define WAV_BANDLIMITED_COMB_15 18
-#define WAV_BANDLIMITED_COMB_15_SIZE 257
-#define WAV_BANDLIMITED_COMB_16 19
-#define WAV_BANDLIMITED_COMB_16_SIZE 257
-#define WAV_BANDLIMITED_COMB_17 20
-#define WAV_BANDLIMITED_COMB_17_SIZE 257
-#define WAV_BANDLIMITED_COMB_18 21
-#define WAV_BANDLIMITED_COMB_18_SIZE 257
-#define WAV_BANDLIMITED_COMB_19 22
-#define WAV_BANDLIMITED_COMB_19_SIZE 257
 #define WS_MODERATE_OVERDRIVE 0
 #define WS_MODERATE_OVERDRIVE_SIZE 257
-#define WS_SLIGHT_OVERDRIVE 1
-#define WS_SLIGHT_OVERDRIVE_SIZE 257
-#define WS_VIOLENT_OVERDRIVE 2
+#define WS_VIOLENT_OVERDRIVE 1
 #define WS_VIOLENT_OVERDRIVE_SIZE 257
-#define WS_SINE_FOLD 3
+#define WS_SINE_FOLD 2
 #define WS_SINE_FOLD_SIZE 257
-#define WS_TRI_FOLD 4
+#define WS_TRI_FOLD 3
 #define WS_TRI_FOLD_SIZE 257
 #define WT_WAVES 0
 #define WT_WAVES_SIZE 33024

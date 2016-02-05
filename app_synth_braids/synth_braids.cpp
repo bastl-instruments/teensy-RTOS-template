@@ -18,7 +18,7 @@
 AudioSynthBraids::AudioSynthBraids() : AudioStream(0, NULL), m_osc(), m_sync_buffer()
 {
     m_osc.Init();
-    m_osc.set_shape(braids::MacroOscillatorShape::MACRO_OSC_SHAPE_CSAW);
+    m_osc.set_shape(braids::MacroOscillatorShape::MACRO_OSC_SHAPE_SNARE);
     m_osc.set_parameters(0, 0);
 }
 

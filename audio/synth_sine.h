@@ -35,7 +35,7 @@
 // using Taylor series expansion.
 // http://www.musicdsp.org/showone.php?id=13
 
-#define NSINES_MAX 16
+#define NSINES_MAX 1
 
 class AudioSynthWaveformSine : public AudioStream
 {

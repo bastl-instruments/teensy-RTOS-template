@@ -11,7 +11,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 
-#define EEPROM_ADDR_CALMIN	(void*)0x000
+#define EEPROM_ADDR_CALMIN	((void*)0x000)
 #define EEPROM_ADDR_CALMAX	(EEPROM_ADDR_CALMIN + 8)
 
 #endif

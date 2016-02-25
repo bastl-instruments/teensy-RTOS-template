@@ -3,7 +3,7 @@
 #  with modifications by Kevin Cuzner
 
 #  Project Name
-PROJECT=app_synth_braids
+PROJECT=app_cv_out
 
 #  Project directory structure
 SRCDIR = src

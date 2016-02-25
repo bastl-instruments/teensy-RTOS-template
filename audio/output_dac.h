@@ -44,6 +44,7 @@ private:
 	audio_block_t *inputQueueArray[1];
 	static DMAChannel dma;
 	static void isr(void);
+	static void pdb_isr(void);
 };
 
 #endif

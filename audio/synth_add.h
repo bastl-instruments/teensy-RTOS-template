@@ -14,7 +14,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 
-#define NSINES_MAX	16
+#define NSINES_MAX	1
 
 class AudioSynthAdditive : public AudioStream
 {

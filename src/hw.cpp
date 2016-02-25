@@ -47,6 +47,13 @@ static buttonEventCB_ft _s_buttonEvent_cb;
 #define SWITCH_PIN_A C,6 	// pin 11
 #define SWITCH_PIN_B D,1 	// pin 14
 
+#define CV_OUT_PIN	D,0		// pin 2
+
+// mux pins
+#define MUX_A	C,1			// pin 22
+#define MUX_B	D,6			// pin 21
+#define MUX_C	D,5			// pin 20
+
 static void __initLeds()
 {
 	INIT_OUTPUT(LED_PCB_CFG)
@@ -56,7 +63,15 @@ static void __initLeds()
 	INIT_OUTPUT(LED_4_CFG)
 	INIT_OUTPUT(LED_A_CFG)
 
+	INIT_OUTPUT(CV_OUT_PIN)
 
+}
+
+static inline void __initMux()
+{
+	INIT_OUTPUT(MUX_C)
+	INIT_OUTPUT(MUX_B)
+	INIT_OUTPUT(MUX_A)
 }
 
 #if 0
@@ -146,6 +161,7 @@ int init()
 {
 	__initLeds();
 	__initButtons();
+	__initMux();
 	eeprom_initialize();
 	EEReadCal();
 	adjustKnobs();
@@ -210,5 +226,13 @@ void EEReadCal()
 	eeprom_read_block(&_g_hw.knob_cal_min, EEPROM_ADDR_CALMIN, sizeof(_g_hw.knob_cal_min));
 	eeprom_read_block(&_g_hw.knob_cal_max, EEPROM_ADDR_CALMAX, sizeof(_g_hw.knob_cal_max));
 }
+
+void setMux(uint8_t channel)
+{
+	PIN_SET(MUX_A, (channel & 1));
+	PIN_SET(MUX_B, (channel & 2));
+	PIN_SET(MUX_C, (channel & 4));
+}
+
 
 }

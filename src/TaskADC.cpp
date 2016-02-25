@@ -22,7 +22,35 @@
 #include "macros.h"
 #include "hw.h"
 
-void adcCalibrate() {
+// defines - configuration
+// how long the timer will run until task is woken up - in Hz
+#define TIMER_UPDATE_F	2048
+/*
+	ADC_CFG1_ADIV(2)         Divide ratio = 4 (F_BUS = 48 MHz => ADCK = 12 MHz)
+	ADC_CFG1_MODE(2)         Single ended 10 bit mode
+	ADC_CFG1_ADLSMP          Long sample time
+*/
+#define ADC_CONFIG1 (ADC_CFG1_ADIV(3) |  ADC_CFG1_ADICLK(1) | ADC_CFG1_MODE(3) | ADC_CFG1_ADLSMP)
+/*
+	ADC_CFG2_MUXSEL          Select channels ADxxb
+	ADC_CFG2_ADLSTS(3)       Shortest long sample time
+*/
+#define ADC_CONFIG2  ADC_CFG2_ADLSTS(0) | ADC_CFG2_MUXSEL
+#define ADC_CHANNEL 8
+
+
+
+// tasks
+static TaskHandle_t s_xADCTask = NULL;
+static TaskHandle_t s_xADCUpdateMuxTask = NULL;
+
+// current channel multiplexed
+static uint16_t s_cur_ch = 0;
+
+
+
+// calibrate ADC channel
+void ADC_CHANNELalibrate() {
 	uint16_t sum;
 
 	// Begin calibration
@@ -41,144 +69,117 @@ void adcCalibrate() {
 	ADC0_MG = sum;
 }
 
-/*
-	ADC_CFG1_ADIV(2)         Divide ratio = 4 (F_BUS = 48 MHz => ADCK = 12 MHz)
-	ADC_CFG1_MODE(2)         Single ended 10 bit mode
-	ADC_CFG1_ADLSMP          Long sample time
-*/
-#define ADC_CONFIG1 (ADC_CFG1_ADIV(3) |  ADC_CFG1_ADICLK(1) | ADC_CFG1_MODE(3) | ADC_CFG1_ADLSMP)
-/*
-	ADC_CFG2_MUXSEL          Select channels ADxxb
-	ADC_CFG2_ADLSTS(3)       Shortest long sample time
-*/
-#define ADC_CONFIG2  ADC_CFG2_ADLSTS(0) | ADC_CFG2_MUXSEL
-#define ADCC 8
 
-static uint16_t s_cur_ch = 0;
-
-#define MUX_A	C,1
-#define MUX_B	D,6
-#define MUX_C	D,5
-static void _muxit(uint8_t val)
+// as the systick is 1 ms, we need finer resolution to wait when waiting for new ADC mux channel voltage to settle in
+//  we use timer1 here to wake up task - adc conversion is done after this wakeup
+void pit1_isr()
 {
-	PIN_SET(MUX_A, (val & 1));
-	PIN_SET(MUX_B, (val & 2));
-	PIN_SET(MUX_C, (val & 4));
+	// disable timer
+	PIT_TCTRL1 &=  ~PIT_TCTRL_TEN;
+	// reset interrupt flag
+	PIT_TFLG1 =  PIT_TFLG_TIF;
+	// wakeup adc update task
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	vTaskNotifyGiveFromISR(s_xADCUpdateMuxTask, &xHigherPriorityTaskWoken);	
 }
 
-static void _ADCInit()
+// initialize ADC module
+static inline void _ADCInit()
 {
-	 // init muxer - pin 20,, 21, 22
-	INIT_OUTPUT(MUX_C)
-	INIT_OUTPUT(MUX_B)
-	INIT_OUTPUT(MUX_A)
-
-
 	ADC0_CFG1 = ADC_CONFIG1;
 	ADC0_CFG2 = ADC_CONFIG2;
-	// Voltage ref vcc, hardware trigger, DMA
+	// Voltage ref vcc
 	ADC0_SC2 = ADC_SC2_REFSEL(0);
 
-	// Enable averaging, 4 samples
-	ADC0_SC3 = ADC_SC3_AVGE | ADC_SC3_AVGS(0);
+	// Enable averaging, 8 samples, single mode
+	ADC0_SC3 = ADC_SC3_AVGE | ADC_SC3_AVGS(1);
 
-	adcCalibrate();
+	ADC_CHANNELalibrate();
 
 	// Enable ADC interrupt, configure pin
-	ADC0_SC1A = ADCC | ADC_SC1_AIEN;
+//    ADC0_SC1A = ADC_CHANNEL | ADC_SC1_AIEN;
 	NVIC_ENABLE_IRQ(IRQ_ADC0);
 }
 
-enum KnobChannel {
-	KC_KNOB1	= 5,
-	KC_KNOB2	= 4,
-	KC_KNOB3	= 6,
-	KC_KNOB4	= 7,
-	KC_CV1		= 0,
-	KC_CV2		= 1,
-	KC_CV3		= 2,
-	KC_CV4		= 3
-} ;
+// set up the task wakeup timer
+static inline void _Timer1Init()
+{
+	SIM_SCGC6 |= SIM_SCGC6_PIT;
+	PIT_MCR = 0;
+	PIT_TCTRL1 = PIT_TCTRL_TIE;
+	PIT_LDVAL1 = (F_BUS / TIMER_UPDATE_F) - 1;
+	NVIC_SET_PRIORITY(IRQ_PIT_CH1, 200);
+	NVIC_ENABLE_IRQ(IRQ_PIT_CH1);
+	_VectorsRam[IRQ_PIT_CH1 + 16] = pit1_isr; // set the timer interrupt
+}
 
 
 void adc0_isr()
 {	
-//    s_ch_vals[s_cur_ch] = ADC0_RA;
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	switch(s_cur_ch) {
-		case KnobChannel::KC_KNOB1: hw->knob.k1 =  (ADC0_RA < hw->knob_cal_min.k1) ? 0 : ((ADC0_RA > hw->knob_cal_max.k1) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k1) * hw->knob_adjust.k1); break;
-		case KnobChannel::KC_KNOB2: hw->knob.k2 =  (ADC0_RA < hw->knob_cal_min.k2) ? 0 : ((ADC0_RA > hw->knob_cal_max.k2) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k2) * hw->knob_adjust.k2); break;
-		case KnobChannel::KC_KNOB3: hw->knob.k3 =  (ADC0_RA < hw->knob_cal_min.k3) ? 0 : ((ADC0_RA > hw->knob_cal_max.k3) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k3) * hw->knob_adjust.k3); break;
-		case KnobChannel::KC_KNOB4: hw->knob.k4 =  (ADC0_RA < hw->knob_cal_min.k4) ? 0 : ((ADC0_RA > hw->knob_cal_max.k4) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k4) * hw->knob_adjust.k4); break;
-		case KnobChannel::KC_CV1: hw->cv.cv1 = ADC0_RA; break;
-		case KnobChannel::KC_CV2: hw->cv.cv2 = ADC0_RA; break;
-		case KnobChannel::KC_CV3: hw->cv.cv3 = ADC0_RA; break;
-		case KnobChannel::KC_CV4: hw->cv.cv4 = ADC0_RA; break;
+		case TeensyHW::hw_t::KnobChannel::KC_KNOB1: hw->knob.k1 =  (ADC0_RA < hw->knob_cal_min.k1) ? 0 : ((ADC0_RA > hw->knob_cal_max.k1) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k1) * hw->knob_adjust.k1); break;
+		case TeensyHW::hw_t::KnobChannel::KC_KNOB2: hw->knob.k2 =  (ADC0_RA < hw->knob_cal_min.k2) ? 0 : ((ADC0_RA > hw->knob_cal_max.k2) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k2) * hw->knob_adjust.k2); break;
+		case TeensyHW::hw_t::KnobChannel::KC_KNOB3: hw->knob.k3 =  (ADC0_RA < hw->knob_cal_min.k3) ? 0 : ((ADC0_RA > hw->knob_cal_max.k3) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k3) * hw->knob_adjust.k3); break;
+		case TeensyHW::hw_t::KnobChannel::KC_KNOB4: hw->knob.k4 =  (ADC0_RA < hw->knob_cal_min.k4) ? 0 : ((ADC0_RA > hw->knob_cal_max.k4) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k4) * hw->knob_adjust.k4); break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV1: hw->cv.cv1 = ADC0_RA; break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV2: hw->cv.cv2 = ADC0_RA; break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV3: hw->cv.cv3 = ADC0_RA; break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV4: hw->cv.cv4 = ADC0_RA; break;
 		default:	break;
 	}
-	s_cur_ch = (s_cur_ch+1) % 8;
-	_muxit(s_cur_ch);
-	ADC0_SC1A = ADCC | ADC_SC1_AIEN;
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+	vTaskNotifyGiveFromISR(s_xADCUpdateMuxTask, &xHigherPriorityTaskWoken);	
 }
 
 
-static TaskHandle_t s_xADCTask = NULL;
-static TaskHandle_t s_xCVActTask = NULL;
 
-static void ADCTask(void *pvParameters)
+static void ADCLogTask(void *pvParameters)
 {
 	while(1) {
-		vTaskDelay(2000);
+		vTaskDelay(1000);
 		TeensyHW::hw_t *hw = TeensyHW::getHW();
-		LOG_PRINT(Log::LOG_DEBUG, "adc: %04x %04x %04x %04x %04x:%d %04x:%d %04x:%d %04x:%d", 
+		LOG_PRINT(Log::LOG_DEBUG, "adc: %04x %04x %04x %04x %04x %04x %04x %04x", 
 				hw->knob.k1,  hw->knob.k2,hw->knob.k3,hw->knob.k4,
-				hw->cv.cv1, hw->cvAct.cv1, 
-				hw->cv.cv2, hw->cvAct.cv2,
-				hw->cv.cv3, hw->cvAct.cv3,
-				hw->cv.cv4, hw->cvAct.cv4
-				);
+				hw->cv.cv1,
+				hw->cv.cv2,
+				hw->cv.cv3,
+				hw->cv.cv4);
 	}
 }
 
-
-uint8_t s_cvAct_cntr[4] = {0,0,0,0};
-
-#define CHECK_CV_FOR_ACTIVITY(n) {\
-		if(((hw->cv.cv##n >> 3) - 4096) > 1000) {\
-			hw->cvAct.cv##n = 1;\
-			s_cvAct_cntr[n-1] = 0;\
-		} else {\
-			if((s_cvAct_cntr[n-1]++) > 4) hw->cvAct.cv##n = 0;\
-		}\
-}
-
-
-// check for zero value on CV input
-static void ADCActTask(void *pvParameters)
+static void ADCUpdateMuxTask(void *pvParameters)
 {
 	while(1) {
-		TeensyHW::hw_t *hw = TeensyHW::getHW();
-		CHECK_CV_FOR_ACTIVITY(1)
-		CHECK_CV_FOR_ACTIVITY(2)
-		CHECK_CV_FOR_ACTIVITY(3)
-		CHECK_CV_FOR_ACTIVITY(4)
-		vTaskDelay(2);
+		// set mux channel
+		s_cur_ch = (s_cur_ch+1) % 8;
+		TeensyHW::setMux(s_cur_ch);
+		// start the timer and wait until it fires
+		PIT_TCTRL1 = PIT_TCTRL_TIE | PIT_TCTRL_TEN;
+		ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+		// start ADC conversion
+		ADC0_SC1A = ADC_CHANNEL | ADC_SC1_AIEN;
+		// wait for conversion to complete		TODO - distinguish between timer and adc wakeups
+		ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
 	}
 }
+
+
 namespace Tasks {
 namespace ADC {
 
 int create() {
 	_ADCInit();
+	_Timer1Init();
 	if(s_xADCTask != NULL) return -2;
-	if(xTaskCreate( ADCTask, "adc", 
+	if(xTaskCreate( ADCLogTask, "adc", 
 					configMINIMAL_STACK_SIZE*2, 
 					NULL, tskIDLE_PRIORITY + 2, 
 					&s_xADCTask) != pdTRUE) return -1;
-	if(xTaskCreate( ADCActTask, "adcAct", 
+	if(xTaskCreate( ADCUpdateMuxTask, "adcMux", 
 					configMINIMAL_STACK_SIZE, 
 					NULL, tskIDLE_PRIORITY + 2, 
-					&s_xADCTask) != pdTRUE) return -1;
+					&s_xADCUpdateMuxTask) != pdTRUE) return -1;
 	return 0;
 }
 

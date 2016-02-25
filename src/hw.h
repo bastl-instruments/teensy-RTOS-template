@@ -55,6 +55,7 @@ typedef struct hw_ {
 		float k3;
 		float k4;
 	} knob_adjust;
+	// CV inputs. if value is < 0x2000, the input is disconnected
 	struct  {
 		uint16_t cv1;
 		uint16_t cv2;
@@ -62,12 +63,6 @@ typedef struct hw_ {
 		uint16_t cv4;
 		uint16_t cv5;
 	} cv;
-	struct {
-		uint8_t cv1:1;
-		uint8_t cv2:1;
-		uint8_t cv3:1;
-		uint8_t cv4:1;
-	} cvAct;
 	enum ButtonState {
 		BUTTON_NULL		=	0,
 		BUTTON_PRESSED	=	1,
@@ -82,6 +77,17 @@ typedef struct hw_ {
 		LED_A	=	10,
 		LED_PCB =	20
 	};
+	// mux channel
+	enum KnobChannel {
+		KC_KNOB1	= 5,
+		KC_KNOB2	= 4,
+		KC_KNOB3	= 6,
+		KC_KNOB4	= 7,
+		KC_CV1		= 0,
+		KC_CV2		= 1,
+		KC_CV3		= 2,
+		KC_CV4		= 3
+	} ;
 
 	uint8_t led1_blinko;
 	uint8_t led2_blinko;
@@ -102,6 +108,8 @@ extern buttonEventCB_ft getButtonEventCB();
 extern void EEWriteCal();
 extern void EEReadCal();
 extern void adjustKnobs();
+
+extern void setMux(uint8_t channel);
 
 }
 

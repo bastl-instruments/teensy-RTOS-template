@@ -39,7 +39,7 @@ static void prvLEDToggleTask(void *pvParameters)
 		{
 				toggle = (toggle) ? 0 : 1;
 				TeensyHW::setLed(TeensyHW::hw_t::LED_PCB, toggle);
-				vTaskDelay(500);
+				vTaskDelay(1000);
 		}
 }
 

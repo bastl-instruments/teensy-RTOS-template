@@ -58,6 +58,7 @@ void AudioOutputAnalog::begin(void)
 		PDB0_MOD = PDB_PERIOD;
 		PDB0_SC = PDB_CONFIG | PDB_SC_LDOK;
 		PDB0_SC = PDB_CONFIG | PDB_SC_SWTRIG;
+//        PDB0_SC &= ~(PDB_SC_DMAEN); // dma disabled - it will be triggered manually in the PDB interrupt
 		PDB0_CH0C1 = 0x0101;
 	}
 
@@ -76,6 +77,9 @@ void AudioOutputAnalog::begin(void)
 	update_responsibility = update_setup();
 	dma.enable();
 	dma.attachInterrupt(isr);
+//    _VectorsRam[IRQ_PDB + 16] = pdb_isr; // set the PDB interrupt
+//    NVIC_ENABLE_IRQ(IRQ_PDB);
+//    NVIC_SET_PRIORITY(IRQ_PDB, 200);
 }
 
 void AudioOutputAnalog::analogReference(int ref)
@@ -111,6 +115,14 @@ void AudioOutputAnalog::update(void)
 	}
 }
 
+void AudioOutputAnalog::pdb_isr(void)
+{
+
+	dma.triggerManual();
+//    PDB0_SC |=  PDB_SC_LDOK;
+	PDB0_SC &=  ~(PDB_SC_PDBIF);
+//    (*(int16_t*)DMA_TCD0_SADDR < 2048) ? GPIOD_PDOR |= (1<<0) :	GPIOD_PDOR &= ~(1<<0);
+}
 // TODO: the DAC has much higher bandwidth than the datasheet says
 // can we output a 2X oversampled output, for easier filtering?
 void AudioOutputAnalog::isr(void)

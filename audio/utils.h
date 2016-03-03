@@ -11,10 +11,10 @@ extern "C" {
 #endif
 
 typedef struct _sine_nfo {
-	_sine_nfo() : phase_acc(0), phase_inc(0), magnitude (16384) {}
+	_sine_nfo() : phase_acc(0), phase_inc(0), magnitude (65535) {}
 	uint32_t phase_acc;
 	uint32_t phase_inc;
-	int32_t magnitude;
+	uint16_t magnitude;
 } sine_nfo_t;
 
 
@@ -22,10 +22,15 @@ typedef struct _sine_nfo {
 #ifdef __cplusplus
 }
 
+#ifndef DDS_SAMPLE_RATE
+#define DDS_SAMPLE_RATE 44100
+#endif
+
 class DDS {
 	public:
 		enum WaveForm {
 			SINE,
+			SINE_HIRES,
 			SQUARE,
 			SAW,
 			TABLE,
@@ -34,19 +39,19 @@ class DDS {
 		DDS() : m_acc(0), m_inc(0), m_mag(65535), m_waveform(SINE), m_cycles(0), m_cycles_max(0) {}
 		void setFrequency(uint16_t freq) {
 			if (freq < 0.0) freq = 0.0;
-			else if (freq > AUDIO_SAMPLE_RATE_EXACT/2) freq = AUDIO_SAMPLE_RATE_EXACT/2;
-			m_inc = freq * (4294967296.0 / AUDIO_SAMPLE_RATE_EXACT);
+			else if (freq > DDS_SAMPLE_RATE/2) freq = DDS_SAMPLE_RATE/2;
+			m_inc = freq * (4294967296.0 / DDS_SAMPLE_RATE);
 		}
 		void setFrequency(float freq) {
 			if (freq < 0.0) freq = 0.0;
-			else if (freq > AUDIO_SAMPLE_RATE_EXACT/2) freq = AUDIO_SAMPLE_RATE_EXACT/2;
-			m_inc = freq * (4294967296.0 / AUDIO_SAMPLE_RATE_EXACT);
+			else if (freq > DDS_SAMPLE_RATE/2) freq = DDS_SAMPLE_RATE/2;
+			m_inc = freq * (4294967296.0 / DDS_SAMPLE_RATE);
 		}
 		void setFrequencyRel(float freq) {
 			// TODO adjust for boundaries
 			if (freq < 0.0) freq = 0.0;
-			else if (freq > AUDIO_SAMPLE_RATE_EXACT/2) freq = AUDIO_SAMPLE_RATE_EXACT/2;
-			m_inc += freq * (4294967296.0 / AUDIO_SAMPLE_RATE_EXACT);
+			else if (freq > DDS_SAMPLE_RATE/2) freq = DDS_SAMPLE_RATE/2;
+			m_inc += freq * (4294967296.0 / DDS_SAMPLE_RATE);
 		}
 		void setAmplitude(float n) {
 			if (n < 0) n = 0;

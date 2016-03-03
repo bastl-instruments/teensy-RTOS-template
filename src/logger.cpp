@@ -19,6 +19,7 @@
 /* local includes */
 #include "core_pins.h"
 #include "usb_serial.h"
+#include "usb_dev.h"
 
 
 #define USB_LOG	
@@ -40,7 +41,6 @@ int init()
 }
 
 	
-#include "usb_dev.h"
 void print(loglevel_t lvl, const char *file, int line, const char *fmt, ...) 
 {
 #ifdef USB_LOG

@@ -47,13 +47,13 @@ static void updateCB( xTimerHandle xTimer )
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 
-	if(hw->cvAct.cv1) {
-	} else {
+//    if(hw->cvAct.cv1) {
+//    } else {
 //        sine.frequency(hw->knob.k1);
 //        sine.frequency(1,hw->knob.k1 / 12);
 //        sine.frequency(2,hw->knob.k1 / 16);
 //        sine.frequency(3,hw->knob.k1 / 20);
-	}
+//    }
 //    if(hw->cvAct.cv2) {
 //    } else {
 //        sine.frequency(4,hw->knob.k2 / 2);
@@ -81,7 +81,7 @@ static void updateCB( xTimerHandle xTimer )
 void setup()
 {
 	AudioMemory(12);
-	sine.frequency(500);
+	sine.frequency(1000);
 }
 
 void run()

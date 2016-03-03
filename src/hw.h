@@ -24,11 +24,20 @@ typedef struct hw_ {
 	uint8_t ledA:1;
 	uint8_t ledPCB:1;
 	
+	// button
 	volatile uint8_t button:2;
 	// state values for button debouncing
 	volatile uint8_t button_s:1;
 	volatile uint8_t button_i:4;
-	volatile uint8_t switch3:2;
+
+	// switch A
+	volatile uint8_t switchA:2;
+	volatile uint8_t switchA_s:1;
+	volatile uint8_t switchA_i:4;
+	// switch B
+	volatile uint8_t switchB:2;
+	volatile uint8_t switchB_s:1;
+	volatile uint8_t switchB_i:4;
 
 
 	struct  {
@@ -86,7 +95,9 @@ typedef struct hw_ {
 		KC_CV1		= 0,
 		KC_CV2		= 1,
 		KC_CV3		= 2,
-		KC_CV4		= 3
+		KC_CV4		= 3,
+
+		KC_CHANNELS	= 8
 	} ;
 
 	uint8_t led1_blinko;
@@ -98,16 +109,32 @@ typedef struct hw_ {
 } hw_t;
 
 typedef void (*buttonEventCB_ft)(hw_t::ButtonState s);
+typedef void (*switchEventCB_ft)(uint8_t sw);
+typedef void (*gateEventCB_ft)(bool state);
 
+// call init() to set pin i/o properly
 extern int init();
+extern hw_t *getHW();
+
+// led manipulation
 extern void setLed(hw_t::Led led, bool s);
 extern void setLedBlink(hw_t::Led led, uint8_t b);
-extern hw_t *getHW();
+
+// callbacks called whenever button state changes
 extern void setButtonEventCB(buttonEventCB_ft f);
+extern void setSwitchEventCB(switchEventCB_ft f);
 extern buttonEventCB_ft getButtonEventCB();
+
+// setting of a knob/cv value for the global hw_t structure
+// only this function will call gate callbacks set by setGateCallback()!
+extern void setCV(hw_t::KnobChannel mux, uint16_t val);
+extern void setGateCallback(hw_t::KnobChannel mux, gateEventCB_ft);
+
+// calibration
 extern void EEWriteCal();
 extern void EEReadCal();
 extern void adjustKnobs();
+
 
 extern void setMux(uint8_t channel);
 

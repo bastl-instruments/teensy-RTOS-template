@@ -22,32 +22,62 @@
 #include "macros.h"
 #include "hw.h"
 
+#include "median.h"
+#include "defines.h"
+
 // defines - configuration
-// how long the timer will run until task is woken up - in Hz
-#define TIMER_UPDATE_F	2048
 /*
-	ADC_CFG1_ADIV(2)         Divide ratio = 4 (F_BUS = 48 MHz => ADCK = 12 MHz)
-	ADC_CFG1_MODE(2)         Single ended 10 bit mode
+	ADC_CFG1_ADIV(3)         Divide ratio = 4 (F_BUS = 48 MHz => ADCK = 12 MHz)
+	ADC_CFG1_MODE(3)         Single ended 16 bit mode
 	ADC_CFG1_ADLSMP          Long sample time
 */
-#define ADC_CONFIG1 (ADC_CFG1_ADIV(3) |  ADC_CFG1_ADICLK(1) | ADC_CFG1_MODE(3) | ADC_CFG1_ADLSMP)
+#define ADC_CONFIG1 (ADC_CFG1_ADIV(0) |  ADC_CFG1_ADICLK(0) | ADC_CFG1_MODE(1) | ADC_CFG1_ADLSMP)
 /*
 	ADC_CFG2_MUXSEL          Select channels ADxxb
 	ADC_CFG2_ADLSTS(3)       Shortest long sample time
 */
-#define ADC_CONFIG2  ADC_CFG2_ADLSTS(0) | ADC_CFG2_MUXSEL
-#define ADC_CHANNEL 8
-
-
+#define ADC_CONFIG2  ADC_CFG2_ADLSTS(3) | ADC_CFG2_MUXSEL
 
 // tasks
 static TaskHandle_t s_xADCTask = NULL;
 static TaskHandle_t s_xADCUpdateMuxTask = NULL;
 
+#include <list>
+class AvgFilter
+{
+	std::list<uint16_t> m_q;
+	public:
+		AvgFilter(uint16_t nitems) : m_q(nitems, 0) { }
+		uint16_t push(uint16_t val) { 
+			uint32_t ret = 0;
+			m_q.pop_front(); m_q.push_back(val); 
+			for(auto x : m_q) {
+				ret += x;
+			}
+			ret /= m_q.size();
+			return ret;
+		}
+};
+
+uint16_t middle_of_3(uint16_t a, uint16_t b, uint16_t c)
+{
+	uint16_t middle;
+
+	if ((a <= b) && (a <= c)) 			middle = (b <= c) ? b : c;
+	else if ((b <= a) && (b <= c))		middle = (a <= c) ? a : c;
+	else								middle = (a <= b) ? a : b;
+	return middle;
+}
+
+static uint8_t s_med_idx = 0;
+static uint16_t s_med[3] = {0,0,0};
+
+//static MedianFilter<uint16_t> s_mf(5);
+
 // current channel multiplexed
 static uint16_t s_cur_ch = 0;
-
-
+static uint16_t s_xval = 0;
+static const uint16_t s_channels[] = {0, 1, 2, 3, 4, 5, 6, 7};
 
 // calibrate ADC channel
 void ADC_CHANNELalibrate() {
@@ -92,7 +122,7 @@ static inline void _ADCInit()
 	ADC0_SC2 = ADC_SC2_REFSEL(0);
 
 	// Enable averaging, 8 samples, single mode
-	ADC0_SC3 = ADC_SC3_AVGE | ADC_SC3_AVGS(1);
+	ADC0_SC3 = ADC_SC3_AVGE | ADC_SC3_AVGS(3);
 
 	ADC_CHANNELalibrate();
 
@@ -107,25 +137,28 @@ static inline void _Timer1Init()
 	SIM_SCGC6 |= SIM_SCGC6_PIT;
 	PIT_MCR = 0;
 	PIT_TCTRL1 = PIT_TCTRL_TIE;
-	PIT_LDVAL1 = (F_BUS / TIMER_UPDATE_F) - 1;
+	PIT_LDVAL1 = (F_BUS / ADC_TIMER_UPDATE_F) - 1;
 	NVIC_SET_PRIORITY(IRQ_PIT_CH1, 200);
 	NVIC_ENABLE_IRQ(IRQ_PIT_CH1);
 	_VectorsRam[IRQ_PIT_CH1 + 16] = pit1_isr; // set the timer interrupt
 }
 
-
 void adc0_isr()
 {	
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
-	switch(s_cur_ch) {
-		case TeensyHW::hw_t::KnobChannel::KC_KNOB1: hw->knob.k1 =  (ADC0_RA < hw->knob_cal_min.k1) ? 0 : ((ADC0_RA > hw->knob_cal_max.k1) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k1) * hw->knob_adjust.k1); break;
-		case TeensyHW::hw_t::KnobChannel::KC_KNOB2: hw->knob.k2 =  (ADC0_RA < hw->knob_cal_min.k2) ? 0 : ((ADC0_RA > hw->knob_cal_max.k2) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k2) * hw->knob_adjust.k2); break;
-		case TeensyHW::hw_t::KnobChannel::KC_KNOB3: hw->knob.k3 =  (ADC0_RA < hw->knob_cal_min.k3) ? 0 : ((ADC0_RA > hw->knob_cal_max.k3) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k3) * hw->knob_adjust.k3); break;
-		case TeensyHW::hw_t::KnobChannel::KC_KNOB4: hw->knob.k4 =  (ADC0_RA < hw->knob_cal_min.k4) ? 0 : ((ADC0_RA > hw->knob_cal_max.k4) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k4) * hw->knob_adjust.k4); break;
-		case TeensyHW::hw_t::KnobChannel::KC_CV1: hw->cv.cv1 = ADC0_RA; break;
-		case TeensyHW::hw_t::KnobChannel::KC_CV2: hw->cv.cv2 = ADC0_RA; break;
-		case TeensyHW::hw_t::KnobChannel::KC_CV3: hw->cv.cv3 = ADC0_RA; break;
-		case TeensyHW::hw_t::KnobChannel::KC_CV4: hw->cv.cv4 = ADC0_RA; break;
+	switch(s_channels[s_cur_ch]) {
+		case TeensyHW::hw_t::KnobChannel::KC_KNOB1: s_xval = ADC0_RA ; break;
+		case TeensyHW::hw_t::KnobChannel::KC_KNOB2: hw->knob.k2 = ADC0_RA; break;
+		case TeensyHW::hw_t::KnobChannel::KC_KNOB3: hw->knob.k3 = ADC0_RA; break;
+		case TeensyHW::hw_t::KnobChannel::KC_KNOB4: hw->knob.k4 = ADC0_RA; break;
+//        case TeensyHW::hw_t::KnobChannel::KC_KNOB1: hw->knob.k1 =  (ADC0_RA < hw->knob_cal_min.k1) ? 0 : ((ADC0_RA > hw->knob_cal_max.k1) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k1) * hw->knob_adjust.k1); break;
+//        case TeensyHW::hw_t::KnobChannel::KC_KNOB2: hw->knob.k2 =  (ADC0_RA < hw->knob_cal_min.k2) ? 0 : ((ADC0_RA > hw->knob_cal_max.k2) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k2) * hw->knob_adjust.k2); break;
+//        case TeensyHW::hw_t::KnobChannel::KC_KNOB3: hw->knob.k3 =  (ADC0_RA < hw->knob_cal_min.k3) ? 0 : ((ADC0_RA > hw->knob_cal_max.k3) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k3) * hw->knob_adjust.k3); break;
+//        case TeensyHW::hw_t::KnobChannel::KC_KNOB4: hw->knob.k4 =  (ADC0_RA < hw->knob_cal_min.k4) ? 0 : ((ADC0_RA > hw->knob_cal_max.k4) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k4) * hw->knob_adjust.k4); break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV1: 
+		case TeensyHW::hw_t::KnobChannel::KC_CV2:
+		case TeensyHW::hw_t::KnobChannel::KC_CV3: 
+		case TeensyHW::hw_t::KnobChannel::KC_CV4: TeensyHW::setCV((TeensyHW::hw_t::KnobChannel)s_channels[s_cur_ch], ADC0_RA); break;
 		default:	break;
 	}
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -137,9 +170,14 @@ void adc0_isr()
 static void ADCLogTask(void *pvParameters)
 {
 	while(1) {
-		vTaskDelay(1000);
+		vTaskDelay(ADC_LOG_INTERVAL);
 		TeensyHW::hw_t *hw = TeensyHW::getHW();
-		LOG_PRINT(Log::LOG_DEBUG, "adc: %04x %04x %04x %04x %04x %04x %04x %04x", 
+#if ADC_LOG_HEX == 1
+#define ADC_LOG_MSG "adc: %04x %04x %04x %04x %04x %04x %04x %04x"
+#else
+#define ADC_LOG_MSG	"adc: %d %d %d %d %d %d %d %d"
+#endif
+		LOG_PRINT(Log::LOG_DEBUG, ADC_LOG_MSG, 
 				hw->knob.k1,  hw->knob.k2,hw->knob.k3,hw->knob.k4,
 				hw->cv.cv1,
 				hw->cv.cv2,
@@ -150,17 +188,23 @@ static void ADCLogTask(void *pvParameters)
 
 static void ADCUpdateMuxTask(void *pvParameters)
 {
+	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	while(1) {
 		// set mux channel
-		s_cur_ch = (s_cur_ch+1) % 8;
-		TeensyHW::setMux(s_cur_ch);
+		s_cur_ch = (s_cur_ch+1) % (sizeof(s_channels) / sizeof(s_channels[0]));
+		TeensyHW::setMux(s_channels[s_cur_ch]);
 		// start the timer and wait until it fires
 		PIT_TCTRL1 = PIT_TCTRL_TIE | PIT_TCTRL_TEN;
 		ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
 		// start ADC conversion
-		ADC0_SC1A = ADC_CHANNEL | ADC_SC1_AIEN;
+		ADC0_SC1A = MUX_ADC_CHANNEL | ADC_SC1_AIEN;
 		// wait for conversion to complete		TODO - distinguish between timer and adc wakeups
 		ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+		if(s_cur_ch == TeensyHW::hw_t::KnobChannel::KC_KNOB1) {
+			s_med_idx = (s_med_idx +1 ) % 3;
+			s_med[s_med_idx] = s_xval;
+			hw->knob.k1 = middle_of_3(s_med[0], s_med[1], s_med[2]);
+		}
 	}
 }
 

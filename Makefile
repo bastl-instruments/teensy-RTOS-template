@@ -3,7 +3,7 @@
 #  with modifications by Kevin Cuzner
 
 #  Project Name
-PROJECT=app_cv_out
+PROJECT=app_osc
 
 #  Project directory structure
 SRCDIR = src

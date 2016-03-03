@@ -21,6 +21,8 @@
 #include "macros.h"
 #include "avr_functions.h"
 #include "src/eeprom_addr.h"
+#include "logger.h"
+#include "src/defines.h"
 
 
 namespace TeensyHW {
@@ -29,30 +31,22 @@ static xTimerHandle xHWTimer = NULL;
 static xTimerHandle xLedTimer = NULL;
 static hw_t _g_hw;
 static buttonEventCB_ft _s_buttonEvent_cb;
+static switchEventCB_ft _s_switchAEvent_cb;
 
+typedef struct {
+	gateEventCB_ft cb;
+	bool state;
+} gate_state_t;
+
+static gate_state_t	_s_gateEvent_cb[hw_t::KnobChannel::KC_CHANNELS];
 
 
 // input interrupt is set on either edges
 #define ENABLE_INTERRUPT(...) ENABLE_INTERRUPT_(__VA_ARGS__)
 #define ENABLE_INTERRUPT_(port, pin)	{ PORT##port##_PCR##pin |= PORT_PCR_IRQC(0xb);	NVIC_ENABLE_IRQ(IRQ_PORT##port); }
 
-#define LED_PCB_CFG	C,5		// teensy pin 	13
-#define LED_1_CFG	C,4		//				10
-#define LED_2_CFG	C,3		//				9
-#define LED_3_CFG	D,3		//				8
-#define LED_4_CFG	D,2		//				7
-#define LED_A_CFG	D,4		//				6
+#define CV_GATE_VAL	0x9c4
 
-#define BUTTON_A_PIN C,7 	// pin 12
-#define SWITCH_PIN_A C,6 	// pin 11
-#define SWITCH_PIN_B D,1 	// pin 14
-
-#define CV_OUT_PIN	D,0		// pin 2
-
-// mux pins
-#define MUX_A	C,1			// pin 22
-#define MUX_B	D,6			// pin 21
-#define MUX_C	D,5			// pin 20
 
 static void __initLeds()
 {
@@ -72,6 +66,16 @@ static inline void __initMux()
 	INIT_OUTPUT(MUX_C)
 	INIT_OUTPUT(MUX_B)
 	INIT_OUTPUT(MUX_A)
+
+	for(auto & e : _s_gateEvent_cb)  e.cb = NULL;
+}
+
+
+static inline void __initButtons()
+{
+	INIT_INPUT(BUTTON_A_PIN);
+	INIT_INPUT(SWITCH_PIN_A);
+	INIT_INPUT(SWITCH_PIN_B);
 }
 
 #if 0
@@ -110,7 +114,7 @@ void portd_isr(void)
 void HWUpdateTimerCB(xTimerHandle xT)
 {
 	// -- update button state --
-	_g_hw.button_i = ((GPIOC_PDIR & (1<<7)) == 0) ? MIN(BUTTON_I_MAX,_g_hw.button_i+1) : MAX(0,_g_hw.button_i-1);
+	_g_hw.button_i = ((PIN_STATE(BUTTON_A_PIN)) == 0) ? MIN(BUTTON_I_MAX,_g_hw.button_i+1) : MAX(0,_g_hw.button_i-1);
 	if(_g_hw.button_i == 0) {
 		_g_hw.button_s = 0;
 	} else if(_g_hw.button_i >= BUTTON_I_MAX) {
@@ -126,7 +130,29 @@ void HWUpdateTimerCB(xTimerHandle xT)
 
 
 	// -- update switch state --
-//    _g_hw.switch3 = (GPIOC_PDIR & (1<<7) | (GPIOD_PDIR & (1<<0));
+	_g_hw.switchA_i = ((PIN_STATE(SWITCH_PIN_A)) == 0) ? MIN(BUTTON_I_MAX,_g_hw.switchA_i+1) : MAX(0,_g_hw.switchA_i-1);
+	if(_g_hw.switchA_i == 0) {
+		_g_hw.switchA_s = 0;
+	} else if(_g_hw.switchA_i >= BUTTON_I_MAX) {
+		_g_hw.switchA_s = 1;
+		_g_hw.switchA_i = BUTTON_I_MAX;
+	}
+	_g_hw.switchA = (_g_hw.switchA << 1) | _g_hw.switchA_s;
+
+	_g_hw.switchB_i = ((PIN_STATE(SWITCH_PIN_B)) == 0) ? MIN(BUTTON_I_MAX,_g_hw.switchB_i+1) : MAX(0,_g_hw.switchB_i-1);
+	if(_g_hw.switchB_i == 0) {
+		_g_hw.switchB_s = 0;
+	} else if(_g_hw.switchB_i >= BUTTON_I_MAX) {
+		_g_hw.switchB_s = 1;
+		_g_hw.switchB_i = BUTTON_I_MAX;
+	}
+	_g_hw.switchB = (_g_hw.switchB << 1) | _g_hw.switchB_s;
+
+	// callback if state of a switch changed
+	if((_s_switchAEvent_cb != NULL) && 	((_g_hw.switchA == hw_t::BUTTON_PRESSED))) _s_switchAEvent_cb(0);
+	if((_s_switchAEvent_cb != NULL) && 	((_g_hw.switchB == hw_t::BUTTON_PRESSED))) _s_switchAEvent_cb(2);
+	if((_s_switchAEvent_cb != NULL) && 	((_g_hw.switchA == hw_t::BUTTON_RELEASED))) _s_switchAEvent_cb(1);
+	if((_s_switchAEvent_cb != NULL) && 	((_g_hw.switchB == hw_t::BUTTON_RELEASED))) _s_switchAEvent_cb(1);
 
 }
 
@@ -140,13 +166,6 @@ void HWBlinkyCB(xTimerHandle xT)
 	if(counter & _g_hw.led4_blinko) setLed(hw_t::LED_4, !_g_hw.led4);
 	if(counter & _g_hw.ledA_blinko) setLed(hw_t::LED_A, !_g_hw.ledA);
 	if(counter & _g_hw.ledPCB_blinko) setLed(hw_t::LED_PCB, !_g_hw.ledPCB);
-}
-
-static void __initButtons()
-{
-	INIT_INPUT(BUTTON_A_PIN);
-	INIT_INPUT(SWITCH_PIN_A);
-	INIT_INPUT(SWITCH_PIN_B);
 }
 
 void adjustKnobs()
@@ -167,7 +186,7 @@ int init()
 	adjustKnobs();
 
 
-	xHWTimer = xTimerCreate("HWTimer", ( 30 ),  pdTRUE,  ( void * ) 0, HWUpdateTimerCB);
+	xHWTimer = xTimerCreate("HWTimer", ( 20 ),  pdTRUE,  ( void * ) 0, HWUpdateTimerCB);
 	xLedTimer = xTimerCreate("LEDTimer", 100, pdTRUE, (void*) 0, HWBlinkyCB);
 
 	xTimerStart( xHWTimer, pdFALSE );
@@ -210,9 +229,37 @@ void setButtonEventCB(buttonEventCB_ft f)
 	_s_buttonEvent_cb = f;
 }
 
+void setSwitchEventCB(switchEventCB_ft f)
+{
+	_s_switchAEvent_cb = f;
+	_g_hw.switchA = _g_hw.switchB = 0;
+}
+
+void setGateCallback(TeensyHW::hw_t::KnobChannel mux, gateEventCB_ft f)
+{
+	if((mux != hw_t::KnobChannel::KC_CV1) && (mux != hw_t::KnobChannel::KC_CV2) && (mux != hw_t::KnobChannel::KC_CV3) && (mux != hw_t::KnobChannel::KC_CV4)) return;
+	_s_gateEvent_cb[mux].cb = f;
+}
+
 buttonEventCB_ft getButtonEventCB()
 {
 	return _s_buttonEvent_cb;
+}
+
+void setCV(hw_t::KnobChannel mux, uint16_t val)
+{
+	if((mux != hw_t::KnobChannel::KC_CV1) && (mux != hw_t::KnobChannel::KC_CV2) && (mux != hw_t::KnobChannel::KC_CV3) && (mux != hw_t::KnobChannel::KC_CV4)) return;
+	if(_s_gateEvent_cb[mux].cb != NULL) {
+		if((_s_gateEvent_cb[mux].state == 0) && (val > CV_GATE_VAL)) { _s_gateEvent_cb[mux].cb(_s_gateEvent_cb[mux].state = 1); }
+		else if((_s_gateEvent_cb[mux].state == 1) && (val < CV_GATE_VAL)) { _s_gateEvent_cb[mux].cb(_s_gateEvent_cb[mux].state = 0); }
+	}
+	switch(mux) {
+		case TeensyHW::hw_t::KnobChannel::KC_CV1: _g_hw.cv.cv1 = val; break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV2: _g_hw.cv.cv2 = val; break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV3: _g_hw.cv.cv3 = val; break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV4: _g_hw.cv.cv4 = val; break;
+		default: break;
+	}
 }
 
 void EEWriteCal()

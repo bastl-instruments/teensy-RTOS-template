@@ -34,12 +34,18 @@ extern "C" {
 // ----------- some config variables --------------------
 // for how long the PIT1 will run until ADC conversion task is woken up - in Hz
 // this is used to let the mux settle a bit - basically it is a update frequency of the ADC
-#define ADC_TIMER_UPDATE_F	16000
+#define ADC_TIMER_UPDATE_F	8000
 
 // logging interval of the ADC task - in ms
 // if the interval is too low, it may cause instability on the ADC input!
-#define ADC_LOG_INTERVAL	100
-#define ADC_LOG_HEX			0
+#define ADC_LOG_INTERVAL	1000
+#define ADC_LOG_HEX			1
+
+// treshold value for CV unplugged 
+// for 12bit ~0x200, for 16bit 0x2000
+#ifndef CV_UNPLUGGED_VAL
+#define CV_UNPLUGGED_VAL	0x200
+#endif
 
 #ifdef __cplusplus
 }

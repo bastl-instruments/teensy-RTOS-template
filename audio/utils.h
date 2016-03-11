@@ -36,7 +36,7 @@ class DDS {
 			TABLE,
 			TRIANGLE
 		};
-		DDS() : m_acc(0), m_inc(0), m_mag(65535), m_waveform(SINE), m_cycles(0), m_cycles_max(0) {}
+		DDS() : m_acc(0), m_inc(0), m_mag(65535), m_waveform(SINE), m_cycles(0), m_cycles_max(0), m_backward(0) {}
 		void setFrequency(uint16_t freq) {
 			if (freq < 0.0) freq = 0.0;
 			else if (freq > DDS_SAMPLE_RATE/2) freq = DDS_SAMPLE_RATE/2;
@@ -70,6 +70,8 @@ class DDS {
 		enum WaveForm  m_waveform;
 		uint16_t m_cycles;
 		uint16_t m_cycles_max;
+
+		uint8_t  m_backward;
 
 
 };

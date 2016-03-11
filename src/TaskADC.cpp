@@ -36,7 +36,7 @@
 	ADC_CFG2_MUXSEL          Select channels ADxxb
 	ADC_CFG2_ADLSTS(3)       Shortest long sample time
 */
-#define ADC_CONFIG2  ADC_CFG2_ADLSTS(3) | ADC_CFG2_MUXSEL
+#define ADC_CONFIG2  ADC_CFG2_ADLSTS(0) | ADC_CFG2_MUXSEL
 
 // tasks
 static TaskHandle_t s_xADCTask = NULL;
@@ -77,7 +77,11 @@ static uint16_t s_med[3] = {0,0,0};
 // current channel multiplexed
 static uint16_t s_cur_ch = 0;
 static uint16_t s_xval = 0;
-static const uint16_t s_channels[] = {0, 1, 2, 3, 4, 5, 6, 7};
+static const uint16_t S_CHANNELS[] = {7,5,6,4,0,1,2,3}; //{0,1,2,3,4,5,6,7};
+
+static const uint16_t *s_channels_p = S_CHANNELS;
+static uint8_t	s_nchannels = (sizeof(S_CHANNELS) / sizeof(S_CHANNELS[0]));
+
 
 // calibrate ADC channel
 void ADC_CHANNELalibrate() {
@@ -111,6 +115,7 @@ void pit1_isr()
 	// wakeup adc update task
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 	vTaskNotifyGiveFromISR(s_xADCUpdateMuxTask, &xHigherPriorityTaskWoken);	
+//    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 // initialize ADC module
@@ -146,8 +151,8 @@ static inline void _Timer1Init()
 void adc0_isr()
 {	
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
-	switch(s_channels[s_cur_ch]) {
-		case TeensyHW::hw_t::KnobChannel::KC_KNOB1: s_xval = ADC0_RA ; break;
+	switch(s_channels_p[s_cur_ch]) {
+		case TeensyHW::hw_t::KnobChannel::KC_KNOB1: hw->knob.k1 = ADC0_RA ; break;
 		case TeensyHW::hw_t::KnobChannel::KC_KNOB2: hw->knob.k2 = ADC0_RA; break;
 		case TeensyHW::hw_t::KnobChannel::KC_KNOB3: hw->knob.k3 = ADC0_RA; break;
 		case TeensyHW::hw_t::KnobChannel::KC_KNOB4: hw->knob.k4 = ADC0_RA; break;
@@ -158,11 +163,12 @@ void adc0_isr()
 		case TeensyHW::hw_t::KnobChannel::KC_CV1: 
 		case TeensyHW::hw_t::KnobChannel::KC_CV2:
 		case TeensyHW::hw_t::KnobChannel::KC_CV3: 
-		case TeensyHW::hw_t::KnobChannel::KC_CV4: TeensyHW::setCV((TeensyHW::hw_t::KnobChannel)s_channels[s_cur_ch], ADC0_RA); break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV4: TeensyHW::setCV((TeensyHW::hw_t::KnobChannel)s_channels_p[s_cur_ch], ADC0_RA); break;
 		default:	break;
 	}
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 	vTaskNotifyGiveFromISR(s_xADCUpdateMuxTask, &xHigherPriorityTaskWoken);	
+//    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 
@@ -170,15 +176,16 @@ void adc0_isr()
 static void ADCLogTask(void *pvParameters)
 {
 	while(1) {
+		
 		vTaskDelay(ADC_LOG_INTERVAL);
 		TeensyHW::hw_t *hw = TeensyHW::getHW();
 #if ADC_LOG_HEX == 1
 #define ADC_LOG_MSG "adc: %04x %04x %04x %04x %04x %04x %04x %04x"
 #else
-#define ADC_LOG_MSG	"adc: %d %d %d %d %d %d %d %d"
+#define ADC_LOG_MSG	"adc: %04d %04d %04d %04d %04d %04d %04d %04d"
 #endif
 		LOG_PRINT(Log::LOG_DEBUG, ADC_LOG_MSG, 
-				hw->knob.k1,  hw->knob.k2,hw->knob.k3,hw->knob.k4,
+				hw->knob.k1, hw->knob.k2,hw->knob.k3,hw->knob.k4,
 				hw->cv.cv1,
 				hw->cv.cv2,
 				hw->cv.cv3,
@@ -191,20 +198,21 @@ static void ADCUpdateMuxTask(void *pvParameters)
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	while(1) {
 		// set mux channel
-		s_cur_ch = (s_cur_ch+1) % (sizeof(s_channels) / sizeof(s_channels[0]));
-		TeensyHW::setMux(s_channels[s_cur_ch]);
+		s_cur_ch = (s_cur_ch+1) % s_nchannels;
+		TeensyHW::setMux(s_channels_p[s_cur_ch]);
 		// start the timer and wait until it fires
 		PIT_TCTRL1 = PIT_TCTRL_TIE | PIT_TCTRL_TEN;
 		ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+//        for(uint16_t i=0;i<3000;i++) asm("nop");
 		// start ADC conversion
 		ADC0_SC1A = MUX_ADC_CHANNEL | ADC_SC1_AIEN;
 		// wait for conversion to complete		TODO - distinguish between timer and adc wakeups
 		ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
-		if(s_cur_ch == TeensyHW::hw_t::KnobChannel::KC_KNOB1) {
-			s_med_idx = (s_med_idx +1 ) % 3;
-			s_med[s_med_idx] = s_xval;
-			hw->knob.k1 = middle_of_3(s_med[0], s_med[1], s_med[2]);
-		}
+//        if(s_channels_p[s_cur_ch] == TeensyHW::hw_t::KnobChannel::KC_KNOB1) {
+//            s_med_idx = (s_med_idx +1 ) % 3;
+//            s_med[s_med_idx] = s_xval;
+//            hw->knob.k1 = middle_of_3(s_med[0], s_med[1], s_med[2]);
+//        }
 	}
 }
 
@@ -225,6 +233,20 @@ int create() {
 					NULL, tskIDLE_PRIORITY + 2, 
 					&s_xADCUpdateMuxTask) != pdTRUE) return -1;
 	return 0;
+}
+
+void setChannels(const uint16_t chans[], size_t nchans)
+{
+	NVIC_DISABLE_IRQ(IRQ_ADC0);
+	if(chans == NULL) {
+		s_channels_p = S_CHANNELS;
+		s_nchannels = (sizeof(S_CHANNELS) / sizeof(S_CHANNELS[0]));
+	} else {
+		s_cur_ch = 0;
+		s_channels_p = chans;
+		s_nchannels = nchans;
+	}
+	NVIC_ENABLE_IRQ(IRQ_ADC0);
 }
 
 }

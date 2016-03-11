@@ -1,6 +1,7 @@
 #  Teensy 3.1 Project Makefile
 #  Karl Lunt
 #  with modifications by Kevin Cuzner
+#  with further modifications by Jozef Henzl
 
 #  Project Name
 PROJECT=app_osc

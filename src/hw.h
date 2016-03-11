@@ -70,6 +70,18 @@ typedef struct hw_ {
 		uint16_t cv2;
 		uint16_t cv3;
 		uint16_t cv4;
+	} cv_cal_min;
+	struct  {
+		uint16_t cv1;
+		uint16_t cv2;
+		uint16_t cv3;
+		uint16_t cv4;
+	} cv_cal_max;
+	struct  {
+		uint16_t cv1;
+		uint16_t cv2;
+		uint16_t cv3;
+		uint16_t cv4;
 		uint16_t cv5;
 	} cv;
 	enum ButtonState {
@@ -131,6 +143,7 @@ extern void setCV(hw_t::KnobChannel mux, uint16_t val);
 extern void setGateCallback(hw_t::KnobChannel mux, gateEventCB_ft);
 
 // calibration
+//extern void EEWriteCal(hw_t::KnobChannel ch, uint16_t min, uint16_t max);
 extern void EEWriteCal();
 extern void EEReadCal();
 extern void adjustKnobs();

@@ -64,7 +64,8 @@ int16_t DDS::next()
 			val2 *= scale;
 			val1 *= 0xFFFF - scale;
 			if((m_acc + m_inc) < m_acc) m_cycles++;
-			m_acc += m_inc;
+			if(m_backward)	m_acc -= m_inc;
+			else			m_acc += m_inc;
 			ret = multiply_32x32_rshift32(val1 + val2, m_mag);
 		break;
 		case SINE_HIRES:

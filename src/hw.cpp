@@ -266,12 +266,16 @@ void EEWriteCal()
 {
 	eeprom_write_block(&_g_hw.knob_cal_min, EEPROM_ADDR_CALMIN, sizeof(_g_hw.knob_cal_min));
 	eeprom_write_block(&_g_hw.knob_cal_max, EEPROM_ADDR_CALMAX, sizeof(_g_hw.knob_cal_max));
+	eeprom_write_block(&_g_hw.cv_cal_min, EEPROM_ADDR_CV_CALMIN, sizeof(_g_hw.cv_cal_min));
+	eeprom_write_block(&_g_hw.cv_cal_max, EEPROM_ADDR_CV_CALMAX, sizeof(_g_hw.cv_cal_max));
 }
 
 void EEReadCal()
 {
 	eeprom_read_block(&_g_hw.knob_cal_min, EEPROM_ADDR_CALMIN, sizeof(_g_hw.knob_cal_min));
 	eeprom_read_block(&_g_hw.knob_cal_max, EEPROM_ADDR_CALMAX, sizeof(_g_hw.knob_cal_max));
+	eeprom_read_block(&_g_hw.cv_cal_min, EEPROM_ADDR_CALMIN, sizeof(_g_hw.knob_cal_min));
+	eeprom_read_block(&_g_hw.cv_cal_max, EEPROM_ADDR_CALMAX, sizeof(_g_hw.knob_cal_max));
 }
 
 void setMux(uint8_t channel)

@@ -51,7 +51,6 @@ static void prvInitTask(void *params)
 	// run main app code
 
 	App::run();
-	TeensyHW::setLed(TeensyHW::hw_t::LED_2, 1);
 
 	while(1) vTaskDelete(xTaskGetCurrentTaskHandle());
 }

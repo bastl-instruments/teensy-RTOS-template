@@ -2,7 +2,8 @@
 #define _TASKADC_H_
 /* system includes */
 /* local includes */
-
+#include <stdint.h>
+#include <stddef.h>
 
 #ifdef  __cplusplus
 extern "C" {
@@ -17,6 +18,7 @@ namespace ADC {
 // system-wide error function
 //
 int create();
+void setChannels(const uint16_t chans[], size_t nchans);
 
 }
 }

@@ -87,10 +87,11 @@ static uint8_t	s_nchannels = (sizeof(S_CHANNELS) / sizeof(S_CHANNELS[0]));
 void ADC_CHANNELalibrate() {
 	uint16_t sum;
 
+	__disable_irq();
 	// Begin calibration
 	ADC0_SC3 = ADC_SC3_CAL;
 	// Wait for calibration
-	while (ADC0_SC3 & ADC_SC3_CAL);
+	while (ADC0_SC3 & ADC_SC3_CAL) { asm("nop"); }
 
 	// Plus side gain
 	sum = ADC0_CLPS + ADC0_CLP4 + ADC0_CLP3 + ADC0_CLP2 + ADC0_CLP1 + ADC0_CLP0;
@@ -101,6 +102,7 @@ void ADC_CHANNELalibrate() {
 	sum = ADC0_CLMS + ADC0_CLM4 + ADC0_CLM3 + ADC0_CLM2 + ADC0_CLM1 + ADC0_CLM0;
 	sum = (sum / 2) | 0x8000;
 	ADC0_MG = sum;
+	__enable_irq();
 }
 
 

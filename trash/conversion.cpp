@@ -14,6 +14,8 @@
 
 
 /* local includes */
+#include "defines.h"
+
 
 extern "C" {
 // converts voltage (5:11 FP int) to 12 bit value for the DAC
@@ -25,14 +27,14 @@ uint16_t voltsToDAC(uint16_t voltage)
 	// 
 	// 12bit dac value = (Vmin - $voltage) / (delta(Vmin,Vmax) / 0xfff)
 	//
-	const uint16_t bit_volts = (1/0.003614163614163614) * (1<<7); // convert to fixed point 9:7
+	const uint16_t bit_volts = (1/DAC_V_PER_BIT) * (1<<7); // convert to fixed point 9:7
 	return voltage * bit_volts;
 }
 
 // convert 12bit dac valut to a s3:11 voltage
 uint16_t dac2volts(int16_t reg)
 {
-	const uint32_t bit_volts = 0.003614163614163614 * (1<<27);
+	const uint32_t bit_volts = DAC_V_PER_BIT * (1<<27);
 	return (reg*bit_volts) >> 15;
 }
 

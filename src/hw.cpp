@@ -38,6 +38,9 @@ typedef struct {
 	bool state;
 } gate_state_t;
 
+hw_t::hw_()
+{}
+
 static gate_state_t	_s_gateEvent_cb[hw_t::KnobChannel::KC_CHANNELS];
 
 
@@ -264,18 +267,53 @@ void setCV(hw_t::KnobChannel mux, uint16_t val)
 
 void EEWriteCal()
 {
-	eeprom_write_block(&_g_hw.knob_cal_min, EEPROM_ADDR_CALMIN, sizeof(_g_hw.knob_cal_min));
-	eeprom_write_block(&_g_hw.knob_cal_max, EEPROM_ADDR_CALMAX, sizeof(_g_hw.knob_cal_max));
-	eeprom_write_block(&_g_hw.cv_cal_min, EEPROM_ADDR_CV_CALMIN, sizeof(_g_hw.cv_cal_min));
-	eeprom_write_block(&_g_hw.cv_cal_max, EEPROM_ADDR_CV_CALMAX, sizeof(_g_hw.cv_cal_max));
+	eeprom_write_block(&_g_hw.knob_cal_min, EEPROM_ADDR_KNOB_CALMIN, sizeof(_g_hw.knob_cal_min));
+	eeprom_write_block(&_g_hw.knob_cal_max, EEPROM_ADDR_KNOB_CALMAX, sizeof(_g_hw.knob_cal_max));
+	eeprom_write_block(&_g_hw.cv_cal_0v, EEPROM_ADDR_CV_CALMIN, sizeof(_g_hw.cv_cal_0v));
+	eeprom_write_block(&_g_hw.cv_cal_1v, EEPROM_ADDR_CV_CALMAX, sizeof(_g_hw.cv_cal_1v));
+	eeprom_write_block(&_g_hw.dac_0v, EEPROM_ADDR_DAC_0V, sizeof(_g_hw.dac_0v));
+	eeprom_write_block(&_g_hw.dac_1v, EEPROM_ADDR_DAC_1V, sizeof(_g_hw.dac_1v));
 }
 
 void EEReadCal()
 {
-	eeprom_read_block(&_g_hw.knob_cal_min, EEPROM_ADDR_CALMIN, sizeof(_g_hw.knob_cal_min));
-	eeprom_read_block(&_g_hw.knob_cal_max, EEPROM_ADDR_CALMAX, sizeof(_g_hw.knob_cal_max));
-	eeprom_read_block(&_g_hw.cv_cal_min, EEPROM_ADDR_CALMIN, sizeof(_g_hw.knob_cal_min));
-	eeprom_read_block(&_g_hw.cv_cal_max, EEPROM_ADDR_CALMAX, sizeof(_g_hw.knob_cal_max));
+	eeprom_read_block(&_g_hw.knob_cal_min, EEPROM_ADDR_KNOB_CALMIN, sizeof(_g_hw.knob_cal_min));
+	eeprom_read_block(&_g_hw.knob_cal_max, EEPROM_ADDR_KNOB_CALMAX, sizeof(_g_hw.knob_cal_max));
+	eeprom_read_block(&_g_hw.cv_cal_0v, EEPROM_ADDR_CV_CALMIN, sizeof(_g_hw.cv_cal_0v));
+	eeprom_read_block(&_g_hw.cv_cal_1v, EEPROM_ADDR_CV_CALMAX, sizeof(_g_hw.cv_cal_1v));
+	eeprom_read_block(&_g_hw.dac_0v, EEPROM_ADDR_DAC_0V, sizeof(_g_hw.dac_0v));
+	eeprom_read_block(&_g_hw.dac_1v, EEPROM_ADDR_DAC_1V, sizeof(_g_hw.dac_1v));
+}
+
+void setCVcal(hw_t::KnobChannel mux, uint16_t v0, uint16_t v1)
+{
+	switch(mux) {
+		case TeensyHW::hw_t::KnobChannel::KC_CV1: _g_hw.cv_cal_0v.cv1 = v0;  _g_hw.cv_cal_1v.cv1 = v1;break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV2: _g_hw.cv_cal_0v.cv2 = v0;  _g_hw.cv_cal_1v.cv2 = v1;break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV3: _g_hw.cv_cal_0v.cv3 = v0;  _g_hw.cv_cal_1v.cv3 = v1;break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV4: _g_hw.cv_cal_0v.cv4 = v0;  _g_hw.cv_cal_1v.cv4 = v1;break;
+		default: return;
+	}
+	eeprom_write_block(&_g_hw.cv_cal_0v, EEPROM_ADDR_CV_CALMIN, sizeof(_g_hw.cv_cal_0v));
+	eeprom_write_block(&_g_hw.cv_cal_1v, EEPROM_ADDR_CV_CALMAX, sizeof(_g_hw.cv_cal_1v));
+}
+
+int32_t cv2volts(hw_t::KnobChannel ch, uint16_t val)
+{
+	uint16_t *v0_p = NULL;
+	uint16_t *v1_p= NULL;
+	int32_t tmp;
+	switch(ch) {
+		case TeensyHW::hw_t::KnobChannel::KC_CV1: v0_p = &_g_hw.cv_cal_0v.cv1; v1_p = &_g_hw.cv_cal_1v.cv1;break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV2: v0_p = &_g_hw.cv_cal_0v.cv2; v1_p = &_g_hw.cv_cal_1v.cv2;break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV3: v0_p = &_g_hw.cv_cal_0v.cv3; v1_p = &_g_hw.cv_cal_1v.cv3;break;
+		case TeensyHW::hw_t::KnobChannel::KC_CV4: v0_p = &_g_hw.cv_cal_0v.cv4; v1_p = &_g_hw.cv_cal_1v.cv4;break;
+		default: return -1;
+	}
+//    LOG_PRINT(Log::LOG_DEBUG, "v=%x 0v=%x 1v=%x", val, *v0_p, *v1_p);
+
+	tmp = ((val-*v0_p)<<16);
+	return tmp/(*v1_p-*v0_p);
 }
 
 void setMux(uint8_t channel)
@@ -285,5 +323,29 @@ void setMux(uint8_t channel)
 	PIN_SET(MUX_C, (channel & 4));
 }
 
+//
+// @param zero is a value at which there is (almost) 0V output on the DAC
+// @param volt_diff is a difference to one volt
+//
+void setDACCalibration(uint16_t zero, uint16_t volt_diff)
+{
+	_g_hw.dac_0v = zero; _g_hw.dac_1v = volt_diff;
+	eeprom_write_block(&zero, 		EEPROM_ADDR_DAC_0V, sizeof(zero));
+	eeprom_write_block(&volt_diff, 	EEPROM_ADDR_DAC_1V, sizeof(volt_diff));
+}
+
+uint16_t DAC_volts2dac(int16_t volts)
+{
+	int32_t bpv = (_g_hw.dac_1v - _g_hw.dac_0v);
+	bpv = (volts*bpv) >> 12;
+//    LOG_PRINT(Log::LOG_DEBUG, "v=%x 0v=%x 1v=%x bpv=%x", volts, _g_hw.dac_0v, _g_hw.dac_1v, bpv);
+	return bpv + _g_hw.dac_0v;
+}
+uint16_t DAC_dac2volts(uint16_t dac)
+{
+//    LOG_PRINT(Log::LOG_DEBUG, "dac=%x 0v=%x 1v=%x", dac, _g_hw.dac_0v, _g_hw.dac_1v);
+	int32_t tmp = ((dac-_g_hw.dac_0v)<<12);
+	return (tmp/(_g_hw.dac_1v - _g_hw.dac_0v));
+}
 
 }

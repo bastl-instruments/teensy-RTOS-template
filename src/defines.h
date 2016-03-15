@@ -47,6 +47,12 @@ extern "C" {
 #define CV_UNPLUGGED_VAL	0x200
 #endif
 
+// measured voltage values on the DAC output
+#define	DAC_VOUT_MIN		-7.3
+#define DAC_VOUT_MAX		7.5
+#define DAC_VOUT_DELTA		(DAC_VOUT_MAX-DAC_VOUT_MIN)
+#define DAC_V_PER_BIT		DAC_VOUT_DELTA / 0xfff
+
 #ifdef __cplusplus
 }
 #endif

@@ -26,7 +26,6 @@
 #include "src/macros.h"
 #include "src/logger.h"
 
-#include "src/conversion.h"
 #include "src/fixedpoint.h"
 
 
@@ -70,14 +69,6 @@ static knob_map_t s_map_ws[] = {
 	{ ADC_KNOB_FROM,											2<<8	},
 	{ ADC_KNOB_TO, 												2<<12	}
 };
-static knob_map_t s_map_cv2[] = {
-	{ CV2_FROM,											0	},
-	{ CV2_TO, 											14*12	}
-};
-static knob_map_t s_map_cv4[] = {
-	{ CV2_FROM,											0	},
-	{ CV2_TO, 											UINT16_MAX	}
-};
 
 static void updateCB( xTimerHandle xTimer );
 
@@ -98,40 +89,13 @@ static void switchEventCB(uint8_t sw)
 }
 
 
+static int32_t f = 0;
 static void updateCB( xTimerHandle xTimer )
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
-	int32_t f_cv = 0;
-	uint32_t f_k1 = 0;
-	int32_t f_fm = 0;
-	int32_t f = 0;
 	
-	// actual frequency consists of sum of these
-	// knob1 - main frequency
-	// knob2 - fine frequency
-	// cv2	 - v/oct 
-	// cv4	 - fm input attentuated by a knob2
-	if(hw->cv.cv2 > CV_UNPLUGGED_VAL) {
-		int32_t cvolts =  cv2volts(hw->cv.cv2);
-		cvolts -= 7.3*(1<<12);
-		f_cv = (cvolts * 1000) >> 12;
-	}
-	f_k1 = map_value(hw->knob.k1, s_map_freq, 4); // base frequency as set by pitch
-	
-
-	if(hw->cv.cv4 > CV_UNPLUGGED_VAL) {
-//         fm mod
-		f_fm = f_fm*((map_value(hw->cv.cv4, s_map_cv4, 2) << 16) * map_value(hw->knob.k2, s_map_k2_att, 2));
-		f_fm = f_fm>>16;
-		f_fm += INT16_MIN;
-	}
-
-	f =  f_k1 + f_cv + f_fm;
-	// set up the frequency for next cycle
-	dds.m_inc = min(abs(f), 20000) * (UINT32_MAX / DDS_SAMPLE_RATE); 
-	dds.m_backward = (f<0);
 	// CV 3 - waveshaper
-#if 0
+#if 1
 	if(hw->cv.cv3 > CV_UNPLUGGED_VAL) {
 		s_waveShaper = map_value(hw->cv.cv3, s_map_ws, 2);
 		s_dc = hw->cv.cv4 << 20;
@@ -141,17 +105,40 @@ static void updateCB( xTimerHandle xTimer )
 	}
 #endif
 
-//    LOG_PRINT(Log::LOG_DEBUG, "%cf=%d", dds.m_backward?'-':'+',dds.m_inc / (UINT32_MAX/ DDS_SAMPLE_RATE));
-//        int32_t f_cv = map_value(hw->cv.cv2-9, s_map_cv2, 2); // semitones
+	// actual frequency consists of sum of these
+	// knob1 - main frequency
+	// knob2 - fine frequency
+	// cv2	 - v/oct 
+	// cv4	 - fm input attentuated by a knob2
+	int16_t f_fm = 0;
+	int16_t f_cv = 0;
+	if(hw->cv.cv2 > CV_UNPLUGGED_VAL) {
+		int32_t cvolts =  TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV2, hw->cv.cv2);
+		f_cv = (cvolts * 1000) >> 16;
+	}
+	int16_t f_k1 = map_value(hw->knob.k1, s_map_freq, 4); // base frequency as set by pitch
+	
+
+	if(hw->cv.cv4 > CV_UNPLUGGED_VAL) {
+//         fm mod
+		int32_t cvolts =  TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV4, hw->cv.cv4);
+		f_fm = ((cvolts >> 8) * map_value(hw->knob.k2, s_map_k2_att, 2)) >> 16;
+	}
+
+	f =  f_k1 + f_cv + f_fm;
+//    LOG_PRINT(Log::LOG_DEBUG, "f_cv=%d f_fm=%d f_k1=%d f=%d",f_cv, f_fm, f_k1, f);
+//     set up the frequency for next cycle
+	dds.m_inc = min(abs(f), 20000) * (UINT32_MAX / DDS_SAMPLE_RATE); 
+	dds.m_backward = (f<0);
 }
 
 static void logCB(xTimerHandle xTimer)
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
-	int32_t cvolts =  cv2volts(hw->cv.cv2);
-	cvolts -= 7.3*(1<<12);
+	int32_t cvolts =  TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV2, hw->cv.cv2);
+//    int16_t f=(cvolts*1000) >> 16;
 	LOG_PRINT(Log::LOG_DEBUG, "%cf=%d", dds.m_backward?'-':'+',dds.m_inc / (UINT32_MAX/ DDS_SAMPLE_RATE));
-	LOG_PRINT(Log::LOG_DEBUG, "cv2=%c%d.%d", (cvolts<0) ? '-' : '+', fp2int(cvolts, 12), frac2int(cvolts, 12));
+//    LOG_PRINT(Log::LOG_DEBUG, "cv2=%c%d.%d f=%d", (cvolts<0) ? '-' : '+', fp2int(cvolts, 16), frac2int(cvolts, 16), f);
 }
 
 namespace OscClassic {
@@ -163,7 +150,7 @@ int16_t update() {
 	static uint8_t ps = 0;
 	uint8_t st = (dds.m_acc + s_phase) > s_dc;	// should we trigger the CV output
 	if(ps != st) { 
-		PIN_TOGGLE(CV_OUT_PIN)
+//        PIN_TOGGLE(CV_OUT_PIN)
 			ps = st; }
 	return  signed_saturate_rshift(xs*s_waveShaper, 16, 9);		
 }

@@ -16,6 +16,7 @@ namespace TeensyHW {
 
 
 typedef struct hw_ {
+	hw_();
 	uint8_t led1:1;
 	uint8_t led2:1;
 	uint8_t led3:1;
@@ -70,13 +71,13 @@ typedef struct hw_ {
 		uint16_t cv2;
 		uint16_t cv3;
 		uint16_t cv4;
-	} cv_cal_min;
+	} cv_cal_0v;
 	struct  {
 		uint16_t cv1;
 		uint16_t cv2;
 		uint16_t cv3;
 		uint16_t cv4;
-	} cv_cal_max;
+	} cv_cal_1v;
 	struct  {
 		uint16_t cv1;
 		uint16_t cv2;
@@ -118,6 +119,9 @@ typedef struct hw_ {
 	uint8_t led4_blinko;
 	uint8_t ledA_blinko;
 	uint8_t ledPCB_blinko;
+
+	uint16_t dac_0v;
+	uint16_t dac_1v;
 } hw_t;
 
 typedef void (*buttonEventCB_ft)(hw_t::ButtonState s);
@@ -140,6 +144,7 @@ extern buttonEventCB_ft getButtonEventCB();
 // setting of a knob/cv value for the global hw_t structure
 // only this function will call gate callbacks set by setGateCallback()!
 extern void setCV(hw_t::KnobChannel mux, uint16_t val);
+extern void setCVcal(hw_t::KnobChannel mux, uint16_t v0, uint16_t v1);
 extern void setGateCallback(hw_t::KnobChannel mux, gateEventCB_ft);
 
 // calibration
@@ -148,6 +153,12 @@ extern void EEWriteCal();
 extern void EEReadCal();
 extern void adjustKnobs();
 
+extern int32_t cv2volts(hw_t::KnobChannel ch, uint16_t val);
+
+//  convert voltage (s4:11 integer) to a 12bit DAC value
+extern uint16_t DAC_volts2dac(int16_t volts);
+extern uint16_t DAC_dac2volts(uint16_t dac);
+extern void setDACCalibration(uint16_t dac_0v, uint16_t dac_1v);
 
 extern void setMux(uint8_t channel);
 

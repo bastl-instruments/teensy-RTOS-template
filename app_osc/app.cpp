@@ -25,15 +25,29 @@
 #include "src/logger.h"
 #include "src/defines.h"
 #include "osc_classic.h"
+#include "osc_quadro.h"
 
+typedef struct {
+	int16_t (*update)();
+	void (*setup)();
+	void (*suspend)();
+	void (*resume)();
+} osc_CB_t;
 
+static osc_CB_t s_osc_CB[] = {
+	{ OscClassic::update, OscClassic::setup, OscClassic::suspend, OscClassic::resume },
+	{ OscQuadro::update, OscQuadro::setup, OscQuadro::suspend, OscQuadro::resume }
+} ;
+
+static osc_CB_t *s_current_osc = &s_osc_CB[0];
 
 namespace App {
+
 
 // output timer triggered in a frequency of DDS_SAMPLE_RATE
 static void pit0_isr()
 {
-    *(int16_t *)&(DAC0_DAT0L) = (OscClassic::update()+32768) >> 4;
+	if(s_current_osc != NULL) *(int16_t *)&(DAC0_DAT0L) = (s_current_osc->update()+32768) >> 4;
 	PIT_TFLG0 =  PIT_TFLG_TIF;
 }
 
@@ -58,7 +72,9 @@ static void pit0_isr()
 
 void setup()
 {
-	OscClassic::setup();
+	for(auto&& osc : s_osc_CB) {
+		osc.setup();
+	}
 	SIM_SCGC6 |= SIM_SCGC6_PIT;						// gate clock
 	PIT_MCR = 0;
 	PIT_TCTRL0 = PIT_TCTRL_TIE | PIT_TCTRL_TEN;		// enable timer + interrupt
@@ -84,13 +100,18 @@ static void buttonEventCB(TeensyHW::hw_t::ButtonState s)
 		s_led = (s_led+1) % 4;
 		TeensyHW::setLed((TeensyHW::hw_t::Led)(s_led+1), 1);
 	} 
+	if(s_current_osc == NULL) return;
+	NVIC_DISABLE_IRQ(IRQ_PIT_CH0);
+	s_current_osc->suspend();
 	switch(s_led) {
-		case 0:	break; 	// classic osc
+		case 0:	s_current_osc = &s_osc_CB[0]; break; 	// classic osc
 		case 1:	break; 	// harmonic
 		case 2:	break; 	// triple detune
-		case 3:	break; 	// 4-poly
+		case 3:	s_current_osc = &s_osc_CB[1]; break; 	// 4-poly
 		default: break;
 	}
+	s_current_osc->resume();
+	NVIC_ENABLE_IRQ(IRQ_PIT_CH0);
 }
 
 

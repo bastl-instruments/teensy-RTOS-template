@@ -95,7 +95,7 @@ static void updateCB( xTimerHandle xTimer )
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	
 	// CV 3 - waveshaper
-#if 1
+
 	if(hw->cv.cv3 > CV_UNPLUGGED_VAL) {
 		s_waveShaper = map_value(hw->cv.cv3, s_map_ws, 2);
 		s_dc = hw->cv.cv4 << 20;
@@ -103,7 +103,7 @@ static void updateCB( xTimerHandle xTimer )
 		s_waveShaper = map_value(hw->knob.k4, s_map_ws, 2);
 		s_dc = hw->knob.k4 << 20;
 	}
-#endif
+
 
 	// actual frequency consists of sum of these
 	// knob1 - main frequency
@@ -150,7 +150,7 @@ int16_t update() {
 	static uint8_t ps = 0;
 	uint8_t st = (dds.m_acc + s_phase) > s_dc;	// should we trigger the CV output
 	if(ps != st) { 
-//        PIN_TOGGLE(CV_OUT_PIN)
+		PIN_TOGGLE(CV_OUT_PIN)
 			ps = st; }
 	return  signed_saturate_rshift(xs*s_waveShaper, 16, 9);		
 }
@@ -164,5 +164,16 @@ void setup() {
 	xTimerStart( xUpdateTimer, 0 );
 	xLogTimer = xTimerCreate("logt", 100, pdTRUE, 	( void * ) 0, logCB);
 	xTimerStart( xLogTimer, 0 );
+}
+
+void suspend()
+{
+	xTimerStop(xUpdateTimer, portMAX_DELAY);
+	xTimerStop(xLogTimer, portMAX_DELAY);
+}
+void resume()
+{
+	xTimerStart(xUpdateTimer, portMAX_DELAY);
+	xTimerStart(xLogTimer, portMAX_DELAY);
 }
 }

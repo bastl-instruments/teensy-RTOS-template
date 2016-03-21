@@ -26,6 +26,7 @@
 #include "src/defines.h"
 #include "osc_classic.h"
 #include "osc_quadro.h"
+#include "osc_triple.h"
 
 typedef struct {
 	int16_t (*update)();
@@ -36,6 +37,7 @@ typedef struct {
 
 static osc_CB_t s_osc_CB[] = {
 	{ OscClassic::update, OscClassic::setup, OscClassic::suspend, OscClassic::resume },
+	{ OscTriple::update, OscTriple::setup, OscTriple::suspend, OscTriple::resume },
 	{ OscQuadro::update, OscQuadro::setup, OscQuadro::suspend, OscQuadro::resume }
 } ;
 
@@ -106,8 +108,8 @@ static void buttonEventCB(TeensyHW::hw_t::ButtonState s)
 	switch(s_led) {
 		case 0:	s_current_osc = &s_osc_CB[0]; break; 	// classic osc
 		case 1:	break; 	// harmonic
-		case 2:	break; 	// triple detune
-		case 3:	s_current_osc = &s_osc_CB[1]; break; 	// 4-poly
+		case 2: s_current_osc = &s_osc_CB[1];	break; 	// triple detune
+		case 3:	s_current_osc = &s_osc_CB[2]; break; 	// 4-poly
 		default: break;
 	}
 	s_current_osc->resume();

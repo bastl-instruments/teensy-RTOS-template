@@ -10,6 +10,8 @@ extern "C" {
 
 #define DDS_SAMPLE_RATE	96000			// main audio rate
 
+#define ADC_KNOB_FROM	259
+#define ADC_KNOB_TO		3993
 
 #ifdef __cplusplus
 }

@@ -25,32 +25,45 @@
 #define NUM_OSC	4
 static DDS s_dds[NUM_OSC];
 static xTimerHandle xUpdateTimer = NULL;
+static void switchEventCB(uint8_t sw)
+{
+	for(auto&& ds : s_dds) {
+		switch(sw) {
+			case 0: ds.setType(DDS::SINE_HIRES); break; 	
+			case 1: ds.setType(DDS::SQUARE);	break; 	
+			case 2: ds.setType(DDS::SAW);	break; 	
+			default: break;
+		}
+	}
+}
 static void updateCB( xTimerHandle xTimer )
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	
-	// CV 3 - waveshaper
-
+	int16_t f_cv;
 	if(hw->cv.cv1 > CV_UNPLUGGED_VAL) {
-//        s_dds[0].m_inc = hw->.k1 * (UINT32_MAX / DDS_SAMPLE_RATE); 
-	} else {
-		s_dds[0].m_inc = hw->knob.k1 * (UINT32_MAX / DDS_SAMPLE_RATE); 
-	}
+		f_cv = (TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV1, hw->cv.cv1) * 1000) >> 16;
+	} else f_cv = 0;
+	s_dds[0].m_inc = (hw->knob.k1 + f_cv) * (UINT32_MAX / DDS_SAMPLE_RATE); 
+	s_dds[0].m_backward = (hw->knob.k1 + f_cv) < 0;
+
 	if(hw->cv.cv2 > CV_UNPLUGGED_VAL) {
-//        s_dds[0].m_inc = hw->.k1 * (UINT32_MAX / DDS_SAMPLE_RATE); 
-	} else {
-		s_dds[1].m_inc = hw->knob.k2 * (UINT32_MAX / DDS_SAMPLE_RATE); 
-	}
+		f_cv = (TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV2, hw->cv.cv2) * 1000) >> 16;
+	} else f_cv = 0;
+	s_dds[1].m_inc = (hw->knob.k2 + f_cv) * (UINT32_MAX / DDS_SAMPLE_RATE); 
+	s_dds[1].m_backward = (hw->knob.k2 + f_cv) < 0;
+
 	if(hw->cv.cv3 > CV_UNPLUGGED_VAL) {
-//        s_dds[0].m_inc = hw->.k1 * (UINT32_MAX / DDS_SAMPLE_RATE); 
-	} else {
-		s_dds[2].m_inc = hw->knob.k3 * (UINT32_MAX / DDS_SAMPLE_RATE); 
-	}
+		f_cv = (TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV3, hw->cv.cv3) * 1000) >> 16;
+	} else f_cv = 0;
+	s_dds[2].m_inc = (hw->knob.k3 + f_cv) * (UINT32_MAX / DDS_SAMPLE_RATE); 
+	s_dds[3].m_backward = (hw->knob.k3 + f_cv) < 0;
+
 	if(hw->cv.cv4 > CV_UNPLUGGED_VAL) {
-//        s_dds[0].m_inc = hw->.k1 * (UINT32_MAX / DDS_SAMPLE_RATE); 
-	} else {
-		s_dds[3].m_inc = hw->knob.k4 * (UINT32_MAX / DDS_SAMPLE_RATE); 
-	}
+		f_cv = (TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV4, hw->cv.cv4) * 1000) >> 16;
+	} else f_cv = 0;
+	s_dds[3].m_inc = (hw->knob.k4 + f_cv) * (UINT32_MAX / DDS_SAMPLE_RATE); 
+	s_dds[3].m_backward = (hw->knob.k4 + f_cv) < 0;
 }
 
 namespace OscQuadro {
@@ -81,5 +94,6 @@ void suspend()
 void resume()
 {
 	xTimerStart(xUpdateTimer, portMAX_DELAY);
+	TeensyHW::setSwitchEventCB(switchEventCB);
 }
 }

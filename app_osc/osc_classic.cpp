@@ -40,13 +40,6 @@ static uint16_t s_waveShaper = 2<<7;
 
 static volatile bool s_rst = 0;
 
-#define ADC_KNOB_FROM	259
-#define ADC_KNOB_TO		3993
-
-#define CV2_FROM		995
-#define CV2_TO			3189
-
-
 static knob_map_t s_map_freqF[] = {
 	{ 0,											0		},
 	{ UINT16_MAX, 									20000	}
@@ -79,7 +72,6 @@ static void cv1gateCB(bool state)
 
 static void switchEventCB(uint8_t sw)
 {
-	// TODO: change waveform
 	switch(sw) {
 		case 0: dds.setType(DDS::SINE_HIRES);	break; 	
 		case 1: dds.setType(DDS::SQUARE);	break; 	
@@ -158,12 +150,9 @@ int16_t update() {
 void setup() {
 	dds.setFrequency((uint16_t)1500);
 	dds.setType(DDS::SINE_HIRES);
-	TeensyHW::setSwitchEventCB(switchEventCB);
-	TeensyHW::setGateCallback(TeensyHW::hw_t::KnobChannel::KC_CV1, cv1gateCB);
 	xUpdateTimer = xTimerCreate("UpdateCB", 1, pdTRUE, 	( void * ) 0, updateCB);
-	xTimerStart( xUpdateTimer, 0 );
 	xLogTimer = xTimerCreate("logt", 100, pdTRUE, 	( void * ) 0, logCB);
-	xTimerStart( xLogTimer, 0 );
+	resume();
 }
 
 void suspend()
@@ -175,5 +164,7 @@ void resume()
 {
 	xTimerStart(xUpdateTimer, portMAX_DELAY);
 	xTimerStart(xLogTimer, portMAX_DELAY);
+	TeensyHW::setSwitchEventCB(switchEventCB);
+	TeensyHW::setGateCallback(TeensyHW::hw_t::KnobChannel::KC_CV1, cv1gateCB);
 }
 }

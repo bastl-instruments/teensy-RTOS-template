@@ -24,9 +24,11 @@
 #include "src/hw.h"
 #include "src/logger.h"
 #include "src/defines.h"
+
 #include "osc_classic.h"
 #include "osc_quadro.h"
 #include "osc_triple.h"
+#include "osc_harmonic.h"
 
 typedef struct {
 	int16_t (*update)();
@@ -37,6 +39,7 @@ typedef struct {
 
 static osc_CB_t s_osc_CB[] = {
 	{ OscClassic::update, OscClassic::setup, OscClassic::suspend, OscClassic::resume },
+	{ OscHarmonic::update, OscHarmonic::setup, OscHarmonic::suspend, OscHarmonic::resume },
 	{ OscTriple::update, OscTriple::setup, OscTriple::suspend, OscTriple::resume },
 	{ OscQuadro::update, OscQuadro::setup, OscQuadro::suspend, OscQuadro::resume }
 } ;
@@ -54,24 +57,6 @@ static void pit0_isr()
 }
 
 
-//class OscDuo : public OscDef
-//{
-//    public:
-//        void setup() {
-//            dds.setAmplitude(0.5);
-//            mod.setAmplitude(0.5);
-//        }
-//        int16_t update() {
-//            int16_t ret = dds.next();
-//            ret+= mod.next();
-
-//            mod.m_inc = map_value(hw->knob.k1, s_map_freq, 4) * (UINT32_MAX / DDS_SAMPLE_RATE); // base frequency as set by pitch
-//            dds.m_inc = map_value(hw->knob.k2, s_map_freq, 4)*2 * (UINT32_MAX / DDS_SAMPLE_RATE); // base frequency as set by pitch
-
-//            return ret;
-//        }
-//};
-
 void setup()
 {
 	for(auto&& osc : s_osc_CB) {
@@ -81,7 +66,7 @@ void setup()
 	PIT_MCR = 0;
 	PIT_TCTRL0 = PIT_TCTRL_TIE | PIT_TCTRL_TEN;		// enable timer + interrupt
 	PIT_LDVAL0 = (F_BUS / DDS_SAMPLE_RATE) - 1;				// update rate
-	NVIC_SET_PRIORITY(IRQ_PIT_CH0, 128);
+	NVIC_SET_PRIORITY(IRQ_PIT_CH0, 80);
 	NVIC_ENABLE_IRQ(IRQ_PIT_CH0);
 	_VectorsRam[IRQ_PIT_CH0 + 16] = pit0_isr; // set the timer interrupt
 	SIM_SCGC2 |= SIM_SCGC2_DAC0;
@@ -107,9 +92,9 @@ static void buttonEventCB(TeensyHW::hw_t::ButtonState s)
 	s_current_osc->suspend();
 	switch(s_led) {
 		case 0:	s_current_osc = &s_osc_CB[0]; break; 	// classic osc
-		case 1:	break; 	// harmonic
-		case 2: s_current_osc = &s_osc_CB[1];	break; 	// triple detune
-		case 3:	s_current_osc = &s_osc_CB[2]; break; 	// 4-poly
+		case 1:	s_current_osc = &s_osc_CB[1]; break;
+		case 2: s_current_osc = &s_osc_CB[2]; break; 	// triple detune
+		case 3:	s_current_osc = &s_osc_CB[3]; break; 	// 4-poly
 		default: break;
 	}
 	s_current_osc->resume();

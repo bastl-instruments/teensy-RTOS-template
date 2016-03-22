@@ -154,7 +154,7 @@ void adc0_isr()
 {	
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	switch(s_channels_p[s_cur_ch]) {
-		case TeensyHW::hw_t::KnobChannel::KC_KNOB1: hw->knob.k1 = ADC0_RA ; break;
+		case TeensyHW::hw_t::KnobChannel::KC_KNOB1: s_xval = ADC0_RA ; break;
 		case TeensyHW::hw_t::KnobChannel::KC_KNOB2: hw->knob.k2 = ADC0_RA; break;
 		case TeensyHW::hw_t::KnobChannel::KC_KNOB3: hw->knob.k3 = ADC0_RA; break;
 		case TeensyHW::hw_t::KnobChannel::KC_KNOB4: hw->knob.k4 = ADC0_RA; break;
@@ -210,11 +210,11 @@ static void ADCUpdateMuxTask(void *pvParameters)
 		ADC0_SC1A = MUX_ADC_CHANNEL | ADC_SC1_AIEN;
 		// wait for conversion to complete		TODO - distinguish between timer and adc wakeups
 		ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
-//        if(s_channels_p[s_cur_ch] == TeensyHW::hw_t::KnobChannel::KC_KNOB1) {
-//            s_med_idx = (s_med_idx +1 ) % 3;
-//            s_med[s_med_idx] = s_xval;
-//            hw->knob.k1 = middle_of_3(s_med[0], s_med[1], s_med[2]);
-//        }
+		if(s_channels_p[s_cur_ch] == TeensyHW::hw_t::KnobChannel::KC_KNOB1) {
+			s_med_idx = (s_med_idx +1 ) % 3;
+			s_med[s_med_idx] = s_xval;
+			hw->knob.k1 = middle_of_3(s_med[0], s_med[1], s_med[2]);
+		}
 	}
 }
 

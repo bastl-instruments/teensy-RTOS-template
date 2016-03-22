@@ -98,18 +98,22 @@ static void updateCB( xTimerHandle xTimer )
 		int32_t cvolts =  TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV2, hw->cv.cv2);
 		f_cv = (cvolts * 1000) >> 16;
 	}
-	
-	int32_t f_k1 = lut_exponential[(hw->knob.k1 - ADC_KNOB_FROM) >> 4];
+
+	// Knob1 - pitch of the synth	
+	int32_t f_k1, f_k2 =0; 
+	f_k1 = lut_exponential[(hw->knob.k1 - ADC_KNOB_FROM) >> 4];
 	f_k1 = (f_k1 * 20000) >> 16;
 
+	// CV4 - fm modulation, attentuated by knob2
 	if(hw->cv.cv4 > CV_UNPLUGGED_VAL) {
-//         fm mod
 		int32_t cvolts =  TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV4, hw->cv.cv4);
-//        f_fm = ((cvolts >> 8) * map_value(hw->knob.k2, s_map_k2_att, 2)) >> 16;
-		f_fm = ((cvolts >> 8) * (lut_exponential[(hw->knob.k1 - ADC_KNOB_FROM) >> 4])) >> 16;
+		f_fm = ((cvolts >> 8) * (lut_exponential[(hw->knob.k2 - ADC_KNOB_FROM) >> 4])) >> 16;
+	} else {
+		// if CV4 is not active, knob2 does finetune
+		 f_k2 = (map_value(hw->knob.k2, s_map_k2_att, 2) * f_k1) >> 16;
 	}
 
-	f =  f_k1 + f_cv + f_fm;
+	f =  f_k1 + f_k2 + f_cv + f_fm;
 //    LOG_PRINT(Log::LOG_DEBUG, "f_cv=%d f_fm=%d f_k1=%d f=%d",f_cv, f_fm, f_k1, f);
 //     set up the frequency for next cycle
 	dds.m_inc = min(abs(f), 20000) * (UINT32_MAX / DDS_SAMPLE_RATE); 
@@ -132,7 +136,7 @@ int16_t update() {
 	int16_t xs = ~dds.next();					// get next sample
 
 	static uint8_t ps = 0;
-	uint8_t st = (dds.m_acc + s_phase) > s_dc;	// should we trigger the CV output
+	static uint8_t st = (dds.m_acc + s_phase) > s_dc;	// should we trigger the CV output
 	if(ps != st) { 
 		PIN_TOGGLE(CV_OUT_PIN)
 			ps = st; }

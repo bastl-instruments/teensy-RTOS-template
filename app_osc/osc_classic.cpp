@@ -28,7 +28,7 @@
 
 #include "src/fixedpoint.h"
 
-
+#include "src/resources.h"
 static DDS dds;
 
 static xTimerHandle xUpdateTimer = NULL;
@@ -40,16 +40,6 @@ static uint16_t s_waveShaper = 2<<7;
 
 static volatile bool s_rst = 0;
 
-static knob_map_t s_map_freqF[] = {
-	{ 0,											0		},
-	{ UINT16_MAX, 									20000	}
-
-};
-static knob_map_t s_map_freq[] = {
-	{ ADC_KNOB_FROM,											0		},
-	{ ADC_KNOB_TO, 												20000	}
-
-};
 static knob_map_t s_map_k1_att[] = {
 	{ ADC_KNOB_FROM,	0},
 	{ ADC_KNOB_TO,		1500 }
@@ -108,13 +98,15 @@ static void updateCB( xTimerHandle xTimer )
 		int32_t cvolts =  TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV2, hw->cv.cv2);
 		f_cv = (cvolts * 1000) >> 16;
 	}
-	int16_t f_k1 = map_value(hw->knob.k1, s_map_freq, 4); // base frequency as set by pitch
 	
+	int32_t f_k1 = lut_exponential[(hw->knob.k1 - ADC_KNOB_FROM) >> 4];
+	f_k1 = (f_k1 * 20000) >> 16;
 
 	if(hw->cv.cv4 > CV_UNPLUGGED_VAL) {
 //         fm mod
 		int32_t cvolts =  TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV4, hw->cv.cv4);
-		f_fm = ((cvolts >> 8) * map_value(hw->knob.k2, s_map_k2_att, 2)) >> 16;
+//        f_fm = ((cvolts >> 8) * map_value(hw->knob.k2, s_map_k2_att, 2)) >> 16;
+		f_fm = ((cvolts >> 8) * (lut_exponential[(hw->knob.k1 - ADC_KNOB_FROM) >> 4])) >> 16;
 	}
 
 	f =  f_k1 + f_cv + f_fm;
@@ -130,7 +122,7 @@ static void logCB(xTimerHandle xTimer)
 	int32_t cvolts =  TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV2, hw->cv.cv2);
 //    int16_t f=(cvolts*1000) >> 16;
 	LOG_PRINT(Log::LOG_DEBUG, "%cf=%d", dds.m_backward?'-':'+',dds.m_inc / (UINT32_MAX/ DDS_SAMPLE_RATE));
-//    LOG_PRINT(Log::LOG_DEBUG, "cv2=%c%d.%d f=%d", (cvolts<0) ? '-' : '+', fp2int(cvolts, 16), frac2int(cvolts, 16), f);
+//    LOG_PRINT(Log::LOG_DEBUG, "k2=%c%d.%d f=%d", (cvolts<0) ? '-' : '+', fp2int(cvolts, 16), frac2int(cvolts, 16), f);
 }
 
 namespace OscClassic {

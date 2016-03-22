@@ -92,7 +92,7 @@ static void buttonEventCB(TeensyHW::hw_t::ButtonState s)
 	s_current_osc->suspend();
 	switch(s_led) {
 		case 0:	s_current_osc = &s_osc_CB[0]; break; 	// classic osc
-		case 1:	s_current_osc = &s_osc_CB[1]; break;
+		case 1:	s_current_osc = &s_osc_CB[1]; break;	// harmonic
 		case 2: s_current_osc = &s_osc_CB[2]; break; 	// triple detune
 		case 3:	s_current_osc = &s_osc_CB[3]; break; 	// 4-poly
 		default: break;
@@ -105,6 +105,7 @@ static void buttonEventCB(TeensyHW::hw_t::ButtonState s)
 void run()
 {
 	TeensyHW::setButtonEventCB(buttonEventCB);
+	TeensyHW::setLed(TeensyHW::hw_t::LED_1, 1);
 }
 
 }

@@ -69,8 +69,8 @@ uint16_t middle_of_3(uint16_t a, uint16_t b, uint16_t c)
 	return middle;
 }
 
-static uint8_t s_med_idx = 0;
-static uint16_t s_med[3] = {0,0,0};
+static uint8_t s_med_idx[8] = {0,0,0,0};
+static uint16_t s_med[4][3] = {0,0,0};
 
 //static MedianFilter<uint16_t> s_mf(5);
 
@@ -153,21 +153,7 @@ static inline void _Timer1Init()
 void adc0_isr()
 {	
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
-	switch(s_channels_p[s_cur_ch]) {
-		case TeensyHW::hw_t::KnobChannel::KC_KNOB1: s_xval = ADC0_RA ; break;
-		case TeensyHW::hw_t::KnobChannel::KC_KNOB2: hw->knob.k2 = ADC0_RA; break;
-		case TeensyHW::hw_t::KnobChannel::KC_KNOB3: hw->knob.k3 = ADC0_RA; break;
-		case TeensyHW::hw_t::KnobChannel::KC_KNOB4: hw->knob.k4 = ADC0_RA; break;
-//        case TeensyHW::hw_t::KnobChannel::KC_KNOB1: hw->knob.k1 =  (ADC0_RA < hw->knob_cal_min.k1) ? 0 : ((ADC0_RA > hw->knob_cal_max.k1) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k1) * hw->knob_adjust.k1); break;
-//        case TeensyHW::hw_t::KnobChannel::KC_KNOB2: hw->knob.k2 =  (ADC0_RA < hw->knob_cal_min.k2) ? 0 : ((ADC0_RA > hw->knob_cal_max.k2) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k2) * hw->knob_adjust.k2); break;
-//        case TeensyHW::hw_t::KnobChannel::KC_KNOB3: hw->knob.k3 =  (ADC0_RA < hw->knob_cal_min.k3) ? 0 : ((ADC0_RA > hw->knob_cal_max.k3) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k3) * hw->knob_adjust.k3); break;
-//        case TeensyHW::hw_t::KnobChannel::KC_KNOB4: hw->knob.k4 =  (ADC0_RA < hw->knob_cal_min.k4) ? 0 : ((ADC0_RA > hw->knob_cal_max.k4) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k4) * hw->knob_adjust.k4); break;
-		case TeensyHW::hw_t::KnobChannel::KC_CV1: 
-		case TeensyHW::hw_t::KnobChannel::KC_CV2:
-		case TeensyHW::hw_t::KnobChannel::KC_CV3: 
-		case TeensyHW::hw_t::KnobChannel::KC_CV4: TeensyHW::setCV((TeensyHW::hw_t::KnobChannel)s_channels_p[s_cur_ch], ADC0_RA); break;
-		default:	break;
-	}
+	s_xval = ADC0_RA;
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 	vTaskNotifyGiveFromISR(s_xADCUpdateMuxTask, &xHigherPriorityTaskWoken);	
 //    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -210,10 +196,48 @@ static void ADCUpdateMuxTask(void *pvParameters)
 		ADC0_SC1A = MUX_ADC_CHANNEL | ADC_SC1_AIEN;
 		// wait for conversion to complete		TODO - distinguish between timer and adc wakeups
 		ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+		switch(s_channels_p[s_cur_ch]) {
+			case TeensyHW::hw_t::KnobChannel::KC_KNOB1: hw->knob.k1 = s_xval ; break;
+			case TeensyHW::hw_t::KnobChannel::KC_KNOB2: hw->knob.k2 = s_xval; break;
+			case TeensyHW::hw_t::KnobChannel::KC_KNOB3: hw->knob.k3 = s_xval; break;
+			case TeensyHW::hw_t::KnobChannel::KC_KNOB4: hw->knob.k4 = s_xval; break;
+	//        case TeensyHW::hw_t::KnobChannel::KC_KNOB1: hw->knob.k1 =  (ADC0_RA < hw->knob_cal_min.k1) ? 0 : ((ADC0_RA > hw->knob_cal_max.k1) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k1) * hw->knob_adjust.k1); break;
+	//        case TeensyHW::hw_t::KnobChannel::KC_KNOB2: hw->knob.k2 =  (ADC0_RA < hw->knob_cal_min.k2) ? 0 : ((ADC0_RA > hw->knob_cal_max.k2) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k2) * hw->knob_adjust.k2); break;
+	//        case TeensyHW::hw_t::KnobChannel::KC_KNOB3: hw->knob.k3 =  (ADC0_RA < hw->knob_cal_min.k3) ? 0 : ((ADC0_RA > hw->knob_cal_max.k3) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k3) * hw->knob_adjust.k3); break;
+	//        case TeensyHW::hw_t::KnobChannel::KC_KNOB4: hw->knob.k4 =  (ADC0_RA < hw->knob_cal_min.k4) ? 0 : ((ADC0_RA > hw->knob_cal_max.k4) ? 0xffff : (ADC0_RA-hw->knob_cal_min.k4) * hw->knob_adjust.k4); break;
+			case TeensyHW::hw_t::KnobChannel::KC_CV1: 
+			case TeensyHW::hw_t::KnobChannel::KC_CV2:
+			case TeensyHW::hw_t::KnobChannel::KC_CV3: 
+			case TeensyHW::hw_t::KnobChannel::KC_CV4: TeensyHW::setCV((TeensyHW::hw_t::KnobChannel)s_channels_p[s_cur_ch], s_xval); break;
+			default:	break;
+		}
+		uint16_t *med_p = NULL;
+		uint8_t *med_idx_p = NULL;
+		uint16_t *val_p = NULL;
 		if(s_channels_p[s_cur_ch] == TeensyHW::hw_t::KnobChannel::KC_KNOB1) {
-			s_med_idx = (s_med_idx +1 ) % 3;
-			s_med[s_med_idx] = s_xval;
-			hw->knob.k1 = middle_of_3(s_med[0], s_med[1], s_med[2]);
+			med_p = s_med[0];
+			med_idx_p = &s_med_idx[0];
+			val_p = &hw->knob.k1;
+		} else
+		if(s_channels_p[s_cur_ch] == TeensyHW::hw_t::KnobChannel::KC_KNOB2) {
+			med_p = s_med[1];
+			med_idx_p = &s_med_idx[1];
+			val_p = &hw->knob.k2;
+		} else
+		if(s_channels_p[s_cur_ch] == TeensyHW::hw_t::KnobChannel::KC_KNOB3) {
+			med_p = s_med[2];
+			med_idx_p = &s_med_idx[2];
+			val_p = &hw->knob.k3;
+		} else
+		if(s_channels_p[s_cur_ch] == TeensyHW::hw_t::KnobChannel::KC_KNOB4) {
+			med_p = s_med[3];
+			med_idx_p = &s_med_idx[3];
+			val_p = &hw->knob.k4;
+		}
+		if((med_p != NULL) && (med_idx_p != NULL)) {
+			*med_idx_p = (*med_idx_p +1 ) % 3;
+			med_p[*med_idx_p] = s_xval;
+			*val_p = middle_of_3(med_p[0], med_p[1], med_p[2]);
 		}
 	}
 }

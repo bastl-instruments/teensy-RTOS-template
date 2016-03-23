@@ -70,7 +70,7 @@ static void updateCB( xTimerHandle xTimer )
 {
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	static int16_t f_cv2 = 0;
-	static int16_t f_k1 = 0;
+	static int16_t f_k1 = 0, f_k2 = 0;
 	static int16_t f_fm = 0;
 	static int32_t f = 0;
 	int32_t cvolts;
@@ -91,10 +91,13 @@ static void updateCB( xTimerHandle xTimer )
 //         fm mod
 		cvolts =  TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV4, hw->cv.cv4);
 		f_fm = ((cvolts >> 8) * map_value(hw->knob.k2, s_map_k2_att, 2)) >> 16;
+	} else {
+		// if CV4 is not active, knob2 does finetune
+		 f_k2 = (map_value(hw->knob.k2, s_map_k2_att, 2) * f_k1) >> 16;
 	}
 
 	f_k1 = map_value(hw->knob.k1, s_map_freq, 4); // base frequency as set by pitch
-	f = f_k1 + f_cv2 + f_fm;
+	f = f_k1 + f_k2 + f_cv2 + f_fm;
 
 	s_dds[0].m_inc = min(abs(f), 20000) * (UINT32_MAX / DDS_SAMPLE_RATE); 
 	s_dds[0].m_backward = (f<0);

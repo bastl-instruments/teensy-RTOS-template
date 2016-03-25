@@ -124,7 +124,6 @@ void setup() {
 		dds.setAmplitude(1.0 / NUM_OSC);
 	}
 	xUpdateTimer = xTimerCreate("UpdateCB", 1, pdTRUE, 	( void * ) 0, updateCB);
-	resume();
 }
 
 void suspend()

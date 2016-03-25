@@ -48,7 +48,7 @@ int16_t DDS::next()
 {
 	uint16_t index;
 	uint32_t scale;
-	int32_t val1, val2;
+	int32_t val1, val2, val3;
 	uint32_t mag = 1;
 	short tmp_amp = 1;
 	int16_t ret = 0;
@@ -57,16 +57,18 @@ int16_t DDS::next()
 	
 	switch(m_waveform) {
 		case SINE:
-			index = m_acc >> 24;
+			index = m_acc >> 24;			// first eight bits are index
 			val1 = AudioWaveformSine[index];
 			val2 = AudioWaveformSine[index+1];
-			scale = (m_acc >> 8) & 0xFFFF;
-			val2 *= scale;
+//            val3 = ((val2-val1)*((m_acc>>16)&0xff));
+//            val3 = (val3<0) ? val1+((0xffff+val3)>>8) : val1+(val3>>8);
+			scale = (m_acc >> 8) & 0xFFFF; // 24 bits are fraction, but we use only 16 of them
 			val1 *= 0xFFFF - scale;
+			val2 *= scale;
 			if((m_acc + m_inc) < m_acc) m_cycles++;
 			if(m_backward)	m_acc -= m_inc;
 			else			m_acc += m_inc;
-			ret = multiply_32x32_rshift32(val1 + val2, m_mag);
+			ret = multiply_32x32_rshift32(val1+val2, m_mag);
 		break;
 		case SINE_HIRES:
 			val1 = taylor(m_acc);

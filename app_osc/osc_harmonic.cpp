@@ -55,7 +55,7 @@ namespace OscHarmonic {
 int16_t update() {
 	int16_t ret = 0;
 	ret = ~s_osc.next() + ~s_sub.next();
-	s_osc.m_inc = (((s_mod1.next()+s_mod2.next()) * 20000) >> 16) * (UINT32_MAX / DDS_SAMPLE_RATE); 
+	s_osc.m_inc = (((s_mod1.next()+s_mod2.next()) * 15000) >> 16) * (UINT32_MAX / DDS_SAMPLE_RATE); 
 	s_sub.m_inc = (((s_mod1.next()+s_mod2.next()) * 200) >> 16) * (UINT32_MAX / DDS_SAMPLE_RATE); 
 	return ret;
 }
@@ -93,6 +93,7 @@ static void updateCB( xTimerHandle xTimer )
 	} else {
 		s_mod2.m_mag = (lut_exponential[(hw->knob.k4 - ADC_KNOB_FROM) >> 4]) >> 3;
 	}
+
 	s_mod1.m_inc = (f * f)  * (UINT32_MAX / DDS_SAMPLE_RATE);
 	s_mod2.m_inc = (f)  * (UINT32_MAX / DDS_SAMPLE_RATE);
 }
@@ -106,7 +107,6 @@ void setup() {
 	s_sub.m_mag = 1<<12;
 	s_osc.m_mag = (1<<16) - s_sub.m_mag;
 	xUpdateTimer = xTimerCreate("UpdateCB", 1, pdTRUE, 	( void * ) 0, updateCB);
-	resume();
 }
 
 void suspend()

@@ -72,7 +72,7 @@ void setup()
 	SIM_SCGC2 |= SIM_SCGC2_DAC0;
 	DAC0_C0 = DAC_C0_DACRFS | DAC_C0_DACEN;                  
 	DAC0_C1 = 0;
-
+	s_current_osc->resume();
 }
 
 

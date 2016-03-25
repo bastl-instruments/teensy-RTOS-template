@@ -63,7 +63,7 @@ static void cv1gateCB(bool state)
 static void switchEventCB(uint8_t sw)
 {
 	switch(sw) {
-		case 0: dds.setType(DDS::SINE_HIRES);	break; 	
+		case 0: dds.setType(DDS::SINE);	break; 	
 		case 1: dds.setType(DDS::SQUARE);	break; 	
 		case 2: dds.setType(DDS::SAW);	break; 	
 		default: break;
@@ -101,8 +101,9 @@ static void updateCB( xTimerHandle xTimer )
 
 	// Knob1 - pitch of the synth	
 	int32_t f_k1, f_k2 =0; 
-	f_k1 = lut_exponential[(hw->knob.k1 - ADC_KNOB_FROM) >> 4];
-	f_k1 = (f_k1 * 20000) >> 16;
+	f_k1 = map_value_exp(hw->knob.k1 << 4);
+	f_k1 = (f_k1 * 12000) >> 16;
+//    f_k1 = map_value_exp(hw->knob.k1 << 4);
 
 	// CV4 - fm modulation, attentuated by knob2
 	if(hw->cv.cv4 > CV_UNPLUGGED_VAL) {
@@ -125,7 +126,8 @@ static void logCB(xTimerHandle xTimer)
 	TeensyHW::hw_t *hw = TeensyHW::getHW();
 	int32_t cvolts =  TeensyHW::cv2volts(TeensyHW::hw_t::KC_CV2, hw->cv.cv2);
 //    int16_t f=(cvolts*1000) >> 16;
-	LOG_PRINT(Log::LOG_DEBUG, "%cf=%d", dds.m_backward?'-':'+',dds.m_inc / (UINT32_MAX/ DDS_SAMPLE_RATE));
+//    LOG_PRINT(Log::LOG_DEBUG, "%cf=%d", dds.m_backward?'-':'+',dds.m_inc / (UINT32_MAX/ DDS_SAMPLE_RATE));
+//    LOG_PRINT(Log::LOG_DEBUG, "k1=%d -> %d", (hw->knob.k1) << 4, map_value_exp((hw->knob.k1) << 4));
 //    LOG_PRINT(Log::LOG_DEBUG, "k2=%c%d.%d f=%d", (cvolts<0) ? '-' : '+', fp2int(cvolts, 16), frac2int(cvolts, 16), f);
 }
 
@@ -145,10 +147,9 @@ int16_t update() {
 
 void setup() {
 	dds.setFrequency((uint16_t)1500);
-	dds.setType(DDS::SINE_HIRES);
+	dds.setType(DDS::SINE);
 	xUpdateTimer = xTimerCreate("UpdateCB", 1, pdTRUE, 	( void * ) 0, updateCB);
 	xLogTimer = xTimerCreate("logt", 100, pdTRUE, 	( void * ) 0, logCB);
-	resume();
 }
 
 void suspend()

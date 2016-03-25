@@ -15,7 +15,8 @@ typedef struct {
 } knob_map_t;
 
 uint16_t map_value(uint16_t val, const knob_map_t map[], size_t size);
-uint16_t map_value_exp(uint16_t val, const knob_map_t map[], size_t size);
+uint16_t map_value_exp(uint16_t val);
+
 
 #ifdef __cplusplus
 }
